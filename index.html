@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pokopia Analyze</title>
+<link rel="icon" href="icon.png" type="image/png">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XM0XQE4B69"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XM0XQE4B69');
+</script>
 <style>
 
   :root {
@@ -151,6 +160,17 @@
   }
   .card:hover { background: var(--card-hover); border-color: #4a4a80; transform: translateY(-1px); }
   .card.selected { border-color: var(--check); background: #132a1e; }
+  .card.env-akarui    { background: color-mix(in srgb, var(--card), rgba(250,204,21,1) 14%); }
+  .card.env-atatakai  { background: color-mix(in srgb, var(--card), rgba(239,68,68,1) 15%); }
+  .card.env-uruoite   { background: color-mix(in srgb, var(--card), rgba(59,130,246,1) 15%); }
+  .card.env-kurai     { background: var(--card); }
+  .card.env-suzushii  { background: color-mix(in srgb, var(--card), rgba(132,204,22,1) 14%); }
+  .card.env-kansou    { background: color-mix(in srgb, var(--card), rgba(180,110,40,1) 16%); }
+  .card.env-akarui:hover   { background: color-mix(in srgb, var(--card-hover), rgba(250,204,21,1) 17%); }
+  .card.env-atatakai:hover { background: color-mix(in srgb, var(--card-hover), rgba(239,68,68,1) 18%); }
+  .card.env-uruoite:hover  { background: color-mix(in srgb, var(--card-hover), rgba(59,130,246,1) 18%); }
+  .card.env-suzushii:hover { background: color-mix(in srgb, var(--card-hover), rgba(132,204,22,1) 17%); }
+  .card.env-kansou:hover   { background: color-mix(in srgb, var(--card-hover), rgba(180,110,40,1) 19%); }
 
   .card-header { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 10px; }
   .checkbox {
@@ -181,10 +201,10 @@
   .card-tag {
     font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600;
   }
-  .card-tag.tokui { background: rgba(99,102,241,0.18); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
-  .card-tag.kankyo { background: rgba(16,185,129,0.13); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .card-tag.tokui { background: rgba(99,102,241,0.18); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); font-size: 12px; }
+  .card-tag.kankyo { background: rgba(16,185,129,0.13); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); font-size: 12px; }
   .card-tag.sukimono { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
-  .card-tag.aji { background: rgba(244,114,182,0.15); color: #f9a8d4; border: 1px solid rgba(244,114,182,0.3); }
+  .card-tag.aji { background: rgba(244,114,182,0.15); color: #f9a8d4; border: 1px solid rgba(244,114,182,0.3); font-size: 12px; }
   .card-tag.hl { box-shadow: 0 0 0 2px white; }
 
   .ibe-divider {
@@ -228,8 +248,43 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: #4a4a80; }
 
+  .filter-fab {
+    display: none;
+  }
+  .drawer-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 150;
+  }
+  .drawer-overlay.open { display: block; }
+  .sidebar-close-btn {
+    display: none;
+    width: 100%;
+    margin-bottom: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
   @media (max-width: 768px) {
-    .sidebar { display: none; }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -290px;
+      width: 270px;
+      height: 100vh;
+      z-index: 160;
+      transition: left 0.25s ease;
+      top: 0;
+    }
+    .sidebar.open { left: 0; }
+    .filter-fab { display: inline-flex; align-items: center; gap: 6px; }
+    .sidebar-close-btn { display: block; }
     .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; padding: 10px; }
     .logo { font-size: 18px; }
   }
@@ -252,8 +307,11 @@
   <div class="header-stats" id="headerStats"></div>
 </div>
 
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
 <div class="layout">
   <div class="sidebar" id="sidebar">
+    <button class="sidebar-close-btn" onclick="closeDrawer()">✕ 閉じる</button>
     <div class="sidebar-section">
       <div class="sidebar-title"><span class="dot"></span>得意なこと</div>
       <div class="tag-grid" id="tokuiTags"></div>
@@ -279,6 +337,7 @@
 
   <div class="main">
     <div class="action-bar">
+      <button class="btn btn-outline filter-fab" id="filterFab" onclick="openDrawer()">&#x1F50D; フィルター</button>
       <button class="btn btn-primary" id="showSelectedBtn" onclick="toggleShowSelected()">✔ チェックしたポケモンを表示</button>
       <button class="btn btn-danger" onclick="clearAllSelected()">× チェックを全解除</button>
 <span class="selected-count" id="selectedCount"></span>
@@ -521,8 +580,17 @@ function renderGrid(data, sort) {
     }
 
     const isSel = selectedSet.has(p.name);
+    const kankyoClassMap = {
+      'あかるい': 'env-akarui',
+      'あたたかい': 'env-atatakai',
+      'うるおっている': 'env-uruoite',
+      'くらい': 'env-kurai',
+      'すずしい': 'env-suzushii',
+      '乾そうしている': 'env-kansou'
+    };
+    const envClass = kankyoClassMap[p.kankyo] || '';
     const card = document.createElement('div');
-    card.className = 'card' + (isSel ? ' selected' : '');
+    card.className = 'card' + (isSel ? ' selected' : '') + (envClass ? ' ' + envClass : '');
     card.dataset.id = p.name;
 
     const noText = p.isIbe
@@ -575,6 +643,17 @@ function renderGrid(data, sort) {
     card.addEventListener('click', () => toggleCard(p.name));
     grid.appendChild(card);
   });
+}
+
+function openDrawer() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDrawer() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // Init
