@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokopia Analyze</title>
+<style>
+
+  :root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --accent: #f59e0b;
+    --bg: #0f0f1a;
+    --bg2: #1a1a2e;
+    --bg3: #16213e;
+    --card: #1e1e35;
+    --card-hover: #252545;
+    --border: #2d2d50;
+    --text: #e2e8f0;
+    --text-muted: #8892a4;
+    --tag-bg: #2a2a4a;
+    --check: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a3e 0%, #0f0f2a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    white-space: nowrap;
+    letter-spacing: 1px;
+    text-decoration: none;
+  }
+  .search-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    gap: 8px;
+    flex: 1;
+    max-width: 280px;
+  }
+  .search-wrap input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-size: 14px; width: 100%;
+  }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+  .header-stats { color: var(--text-muted); font-size: 13px; margin-left: auto; }
+
+  .layout { display: flex; min-height: calc(100vh - 58px); }
+
+  .sidebar {
+    width: 270px; min-width: 270px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 14px;
+    overflow-y: auto;
+    position: sticky;
+    top: 58px;
+    height: calc(100vh - 58px);
+  }
+  .sidebar-section { margin-bottom: 18px; }
+  .sidebar-title {
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--text-muted); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sidebar-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+  .tag-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag {
+    background: var(--tag-bg); border: 1px solid var(--border);
+    color: var(--text-muted); border-radius: 5px;
+    padding: 3px 9px; font-size: 11px;
+    cursor: pointer; transition: all 0.12s; user-select: none;
+  }
+  .tag:hover { border-color: var(--primary); color: var(--text); }
+  .tag.active { background: var(--primary); border-color: var(--primary); color: white; }
+  .clear-btn {
+    font-size: 11px; color: var(--text-muted);
+    cursor: pointer; text-decoration: underline;
+    margin-top: 5px; display: inline-block;
+  }
+  .clear-btn:hover { color: var(--text); }
+
+  .action-bar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--bg2);
+    border-bottom: 1px solid var(--border); align-items: center;
+  }
+  .btn {
+    padding: 6px 13px; border-radius: 7px; border: none;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.12s; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+  .btn-outline:hover { border-color: var(--primary); color: var(--text); }
+  .btn-danger { background: transparent; border: 1px solid #ef4444; color: #ef4444; }
+  .btn-danger:hover { background: #ef4444; color: white; }
+  .selected-count { font-size: 13px; color: var(--accent); font-weight: 700; margin-left: auto; }
+
+  .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+  .sort-bar {
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-muted); flex-wrap: wrap;
+  }
+  .sort-bar select {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px;
+    padding: 3px 8px; font-size: 12px; cursor: pointer; outline: none;
+  }
+  .result-count { font-size: 12px; color: var(--text-muted); }
+  .filter-summary { font-size: 11px; color: #a5b4fc; margin-left: auto; max-width: 60%; text-align: right; line-height: 1.4; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
+    gap: 10px; padding: 14px; align-items: start;
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 11px; padding: 13px;
+    transition: all 0.12s; cursor: pointer;
+  }
+  .card:hover { background: var(--card-hover); border-color: #4a4a80; transform: translateY(-1px); }
+  .card.selected { border-color: var(--check); background: #132a1e; }
+
+  .card-header { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 10px; }
+  .checkbox {
+    width: 19px; height: 19px; border: 2px solid var(--border);
+    border-radius: 5px; flex-shrink: 0; margin-top: 3px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s; background: var(--bg3);
+  }
+  .card.selected .checkbox { background: var(--check); border-color: var(--check); }
+  .checkbox::after {
+    content: ''; width: 4px; height: 8px;
+    border: 2px solid white; border-top: none; border-left: none;
+    transform: rotate(45deg) translateY(-1px); opacity: 0; transition: opacity 0.1s;
+  }
+  .card.selected .checkbox::after { opacity: 1; }
+
+  .card-name-block { flex: 1; min-width: 0; }
+  .card-no { font-size: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; }
+  .card-name { font-size: 16px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .card-hitoshou { font-size: 10px; color: var(--accent); margin-top: 2px; }
+
+  .card-section { margin-bottom: 7px; }
+  .card-label {
+    font-size: 9px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 3px;
+  }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+  .card-tag {
+    font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600;
+  }
+  .card-tag.tokui { background: rgba(99,102,241,0.18); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+  .card-tag.kankyo { background: rgba(16,185,129,0.13); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .card-tag.sukimono { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+  .card-tag.aji { background: rgba(244,114,182,0.15); color: #f9a8d4; border: 1px solid rgba(244,114,182,0.3); }
+  .card-tag.hl { box-shadow: 0 0 0 2px white; }
+
+  .ibe-divider {
+    grid-column: 1 / -1; padding: 6px 0;
+    font-size: 11px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 8px; font-weight: 600;
+  }
+  .ibe-divider::before, .ibe-divider::after {
+    content: ''; flex: 1; border-top: 1px dashed var(--border);
+  }
+
+  .selected-panel {
+    background: #0c1f18; border-top: 2px solid var(--check);
+    padding: 12px 14px; display: none;
+  }
+  .selected-panel.show { display: block; }
+  .selected-panel-title {
+    font-size: 12px; font-weight: 700; color: var(--check);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 5px;
+  }
+  .selected-summary { display: flex; flex-wrap: wrap; gap: 5px; }
+  .selected-chip {
+    background: rgba(16,185,129,0.13); border: 1px solid rgba(16,185,129,0.3);
+    color: #6ee7b7; border-radius: 20px; padding: 3px 10px;
+    font-size: 11px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .selected-chip .rm {
+    cursor: pointer; opacity: 0.6; font-size: 13px; line-height: 1;
+  }
+  .selected-chip .rm:hover { opacity: 1; }
+
+  .empty-state {
+    grid-column: 1/-1; text-align: center;
+    padding: 50px 20px; color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #4a4a80; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; padding: 10px; }
+    .logo { font-size: 18px; }
+  }
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: 1fr; }
+    .action-bar { gap: 5px; }
+    .btn { font-size: 11px; padding: 5px 10px; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">✨ Pokopia Analyze</div>
+  <div class="search-wrap">
+    <span style="color:var(--text-muted)">&#x1F50D;</span>
+    <input type="text" id="searchInput" placeholder="ポケモン名で検索...">
+  </div>
+  <div class="header-stats" id="headerStats"></div>
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title"><span class="dot"></span>得意なこと</div>
+      <div class="tag-grid" id="tokuiTags"></div>
+      <span class="clear-btn" onclick="clearFilter('tokui')">× クリア</span>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title"><span class="dot" style="background:#10b981"></span>好きな環境</div>
+      <div class="tag-grid" id="kankyoTags"></div>
+      <span class="clear-btn" onclick="clearFilter('kankyo')">× クリア</span>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title"><span class="dot" style="background:#f472b6"></span>好きな味</div>
+      <div class="tag-grid" id="ajiTags"></div>
+      <span class="clear-btn" onclick="clearFilter('aji')">× クリア</span>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title"><span class="dot" style="background:#f59e0b"></span>好きなもの</div>
+      <div class="tag-grid" id="sukimonoTags"></div>
+      <span class="clear-btn" onclick="clearFilter('sukimono')">× クリア</span>
+    </div>
+    <button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:4px" onclick="clearAllFilters()">↺ フィルター全リセット</button>
+  </div>
+
+  <div class="main">
+    <div class="action-bar">
+      <button class="btn btn-primary" id="showSelectedBtn" onclick="toggleShowSelected()">✔ チェックしたポケモンを表示</button>
+      <button class="btn btn-danger" onclick="clearAllSelected()">× チェックを全解除</button>
+<span class="selected-count" id="selectedCount"></span>
+    </div>
+
+    <div class="sort-bar">
+      <span>並び順：</span>
+      <select id="sortSelect" onchange="applyFilters()">
+        <option value="no">図鑑No.順</option>
+        <option value="name">名前順</option>
+        <option value="kankyo">好きな環境順</option>
+        <option value="tokui">得意なこと順</option>
+      </select>
+      <span class="result-count" id="resultCount"></span>
+      <span class="filter-summary" id="filterSummary"></span>
+    </div>
+
+    <div class="grid" id="pokemonGrid"></div>
+
+    <div class="selected-panel" id="selectedPanel">
+      <div class="selected-panel-title">✔ 選択中のポケモン (<span id="selectedPanelCount">0</span>体)</div>
+      <div class="selected-summary" id="selectedSummary"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const POKEMON_DATA = [{"no": 1, "name": "フシギダネ", "tokui": ["さいばい"], "kankyo": "あかるい", "hitoshou": "ウチ", "sukimono": ["自然を感じる", "やわらかい", "キュート", "水を感じる", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 2, "name": "フシギソウ", "tokui": ["さいばい"], "kankyo": "あかるい", "hitoshou": "ウチ", "sukimono": ["自然を感じる", "やわらかい", "キュート", "花ざかり", "カラフル"], "isIbe": false, "aji": "すっぱい"}, {"no": 3, "name": "フシギバナ", "tokui": ["さいばい", "ちらかす（はっぱ）"], "kankyo": "あかるい", "hitoshou": "アタシ", "sukimono": ["自然を感じる", "やわらかい", "キュート", "花ざかり", "ゴージャス"], "isIbe": false, "aji": "すっぱい"}, {"no": 4, "name": "ヒトカゲ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "おれ", "sukimono": ["炎を感じる", "木製", "かたい", "トレーニングできる", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 5, "name": "リザード", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "オレ", "sukimono": ["炎を感じる", "木製", "かたい", "トレーニングできる", "乗りもの"], "isIbe": false, "aji": "からい"}, {"no": 6, "name": "リザードン", "tokui": ["もやす", "そらをとぶ"], "kankyo": "あたたかい", "hitoshou": "オレ", "sukimono": ["炎を感じる", "風を感じる", "木製", "トレーニングできる", "ゴージャス"], "isIbe": false, "aji": "からい"}, {"no": 7, "name": "ゼニガメ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "オイラ", "sukimono": ["水を感じる", "せいけつ", "キズをいやす", "キュート", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 8, "name": "カメール", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "オイラ", "sukimono": ["水を感じる", "せいけつ", "キズをいやす", "トレーニングできる", "かたい"], "isIbe": false, "aji": "からい"}, {"no": 9, "name": "カメックス", "tokui": ["うるおす", "とりひき"], "kankyo": "うるおっている", "hitoshou": "ワシ", "sukimono": ["水を感じる", "せいけつ", "キズをいやす", "トレーニングできる", "ゴージャス"], "isIbe": false, "aji": "すっぱい"}, {"no": 10, "name": "ポッポ", "tokui": ["そらをとぶ", "さがしもの"], "kankyo": "あかるい", "hitoshou": "あたい", "sukimono": ["やわらかい", "風を感じる", "見て楽しむ", "自然を感じる", "あそびば"], "isIbe": false, "aji": "すっぱい"}, {"no": 11, "name": "ピジョン", "tokui": ["そらをとぶ", "さがしもの"], "kankyo": "あかるい", "hitoshou": "おいら", "sukimono": ["やわらかい", "風を感じる", "見て楽しむ", "自然を感じる", "食べものそっくり"], "isIbe": false, "aji": "からい"}, {"no": 12, "name": "ピジョット", "tokui": ["そらをとぶ", "きをきる"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "風を感じる", "木製", "自然を感じる", "ゴージャス"], "isIbe": false, "aji": "すっぱい"}, {"no": 13, "name": "ナゾノクサ", "tokui": ["さいばい"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "土を感じる", "やわらかい", "花ざかり", "水を感じる"], "isIbe": false, "aji": "にがい"}, {"no": 14, "name": "クサイハナ", "tokui": ["さいばい"], "kankyo": "うるおっている", "hitoshou": "ぼく", "sukimono": ["自然を感じる", "土を感じる", "やわらかい", "花ざかり", "ゴミ"], "isIbe": false, "aji": "しぶい"}, {"no": 15, "name": "ラフレシア", "tokui": ["さいばい", "ちらかす（はっぱ）"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["自然を感じる", "土を感じる", "やわらかい", "花ざかり", "カラフル"], "isIbe": false, "aji": "にがい"}, {"no": 16, "name": "キレイハナ", "tokui": ["さいばい", "もりあげる"], "kankyo": "あかるい", "hitoshou": "私", "sukimono": ["自然を感じる", "花ざかり", "あそびば", "キュート", "音が鳴る"], "isIbe": false, "aji": "すっぱい"}, {"no": 17, "name": "パラス", "tokui": ["さがしもの"], "kankyo": "うるおっている", "hitoshou": "ウチ", "sukimono": ["自然を感じる", "木製", "見て楽しむ", "土を感じる", "食べものそっくり"], "isIbe": false, "aji": "にがい"}, {"no": 18, "name": "パラセクト", "tokui": ["さがしもの"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "木製", "見て楽しむ", "土を感じる", "フシギ"], "isIbe": false, "aji": "にがい"}, {"no": 19, "name": "コンパン", "tokui": ["さがしもの"], "kankyo": "あかるい", "hitoshou": "ボク", "sukimono": ["自然を感じる", "木製", "見て楽しむ", "難しそうなもの", "文字がある"], "isIbe": false, "aji": "にがい"}, {"no": 20, "name": "モルフォン", "tokui": ["さがしもの"], "kankyo": "あかるい", "hitoshou": "わたくし", "sukimono": ["自然を感じる", "木製", "見て楽しむ", "風を感じる", "花ざかり"], "isIbe": false, "aji": "にがい"}, {"no": 21, "name": "マダツボミ", "tokui": ["さいばい", "ちらかす（つたひも）"], "kankyo": "うるおっている", "hitoshou": "ぼく", "sukimono": ["自然を感じる", "木製", "土を感じる", "水を感じる", "花ざかり"], "isIbe": false, "aji": "しぶい"}, {"no": 22, "name": "ウツドン", "tokui": ["さいばい", "ちらかす（つたひも）"], "kankyo": "うるおっている", "hitoshou": "オレ", "sukimono": ["自然を感じる", "木製", "土を感じる", "カラフル", "花ざかり"], "isIbe": false, "aji": "にがい"}, {"no": 23, "name": "ウツボット", "tokui": ["さいばい", "きをきる"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["自然を感じる", "木製", "土を感じる", "カラフル", "花ざかり"], "isIbe": false, "aji": "にがい"}, {"no": 24, "name": "ヤドン", "tokui": ["うるおす", "あくび"], "kankyo": "うるおっている", "hitoshou": "オデ", "sukimono": ["水を感じる", "せいけつ", "フシギ", "やわらかい", "キズをいやす"], "isIbe": false, "aji": "しぶい"}, {"no": 25, "name": "ヤドラン", "tokui": ["うるおす", "とりひき"], "kankyo": "うるおっている", "hitoshou": "ぼく", "sukimono": ["水を感じる", "せいけつ", "フシギ", "みんなで使う", "キズをいやす"], "isIbe": false, "aji": "しぶい"}, {"no": 26, "name": "ヤドキング", "tokui": ["うるおす", "テレポート"], "kankyo": "うるおっている", "hitoshou": "あたし", "sukimono": ["水を感じる", "せいけつ", "フシギ", "みんなで使う", "キズをいやす"], "isIbe": false, "aji": "すっぱい"}, {"no": 27, "name": "コイル", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "オイラ", "sukimono": ["電気で動く", "メタリック", "キラキラしてる", "かたい", "みんなで使う"], "isIbe": false, "aji": "にがい"}, {"no": 28, "name": "レアコイル", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["電気で動く", "メタリック", "キラキラしてる", "あつまり", "みんなで使う"], "isIbe": false, "aji": ""}, {"no": 29, "name": "ジバコイル", "tokui": ["はつでん", "リサイクル"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["電気で動く", "メタリック", "ゴージャス", "あつまり", "かたい"], "isIbe": false, "aji": "にがい"}, {"no": 30, "name": "イワーク", "tokui": ["つぶす", "じならし"], "kankyo": "乾そうしている", "hitoshou": "おれ", "sukimono": ["石づくり", "土を感じる", "四角い", "ほっそり", "トレーニングできる"], "isIbe": false, "aji": "しぶい"}, {"no": 31, "name": "ハガネール", "tokui": ["つぶす", "じならし"], "kankyo": "乾そうしている", "hitoshou": "ワシ", "sukimono": ["メタリック", "土を感じる", "石づくり", "ほっそり", "かたい"], "isIbe": false, "aji": "すっぱい"}, {"no": 32, "name": "カラカラ", "tokui": ["けんちく"], "kankyo": "乾そうしている", "hitoshou": "あたし", "sukimono": ["土を感じる", "けんせつ", "トレーニングできる", "ほっそり", "みんなで使う"], "isIbe": false, "aji": "にがい"}, {"no": 33, "name": "ガラガラ", "tokui": ["けんちく"], "kankyo": "乾そうしている", "hitoshou": "わたし", "sukimono": ["土を感じる", "けんせつ", "トレーニングできる", "ほっそり", "ゴージャス"], "isIbe": false, "aji": "しぶい"}, {"no": 34, "name": "バルキー", "tokui": ["とりひき"], "kankyo": "あかるい", "hitoshou": "オイラ", "sukimono": ["トレーニングできる", "みんなで使う", "布仕立て", "石づくり", "まんまる"], "isIbe": false, "aji": "からい"}, {"no": 35, "name": "サワムラー", "tokui": ["とりひき"], "kankyo": "あかるい", "hitoshou": "ワシ", "sukimono": ["トレーニングできる", "みんなで使う", "布仕立て", "石づくり", "まんまる"], "isIbe": false, "aji": "からい"}, {"no": 36, "name": "エビワラー", "tokui": ["とりひき"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["トレーニングできる", "みんなで使う", "布仕立て", "石づくり", "まんまる"], "isIbe": false, "aji": "あまい"}, {"no": 37, "name": "カポエラー", "tokui": ["とりひき"], "kankyo": "あかるい", "hitoshou": "ぼく", "sukimono": ["トレーニングできる", "みんなで使う", "布仕立て", "石づくり", "まんまる"], "isIbe": false, "aji": "あまい"}, {"no": 38, "name": "ドガース", "tokui": ["リサイクル"], "kankyo": "くらい", "hitoshou": "オレっち", "sukimono": ["ゴミ", "あつまり", "難しそうなもの", "やわらかい", "ゆれる"], "isIbe": false, "aji": "にがい"}, {"no": 39, "name": "マタドガス", "tokui": ["リサイクル"], "kankyo": "くらい", "hitoshou": "あたし", "sukimono": ["ゴミ", "あつまり", "難しそうなもの", "やわらかい", "ゆれる"], "isIbe": false, "aji": "にがい"}, {"no": 40, "name": "モンジャラ", "tokui": ["さいばい", "ちらかす（つたひも）"], "kankyo": "あかるい", "hitoshou": "あたし", "sukimono": ["自然を感じる", "水を感じる", "あつまり", "花ざかり", "ほっそり"], "isIbe": false, "aji": "すっぱい"}, {"no": 41, "name": "モジャンボ(はかせ)", "tokui": ["かんてい"], "kankyo": "うるおっている", "hitoshou": "ワシ", "sukimono": ["自然を感じる", "難しそうなもの", "文字がある", "フシギ", "みんなで使う"], "isIbe": false, "aji": "しぶい"}, {"no": 41, "name": "モジャンボ", "tokui": ["さいばい", "ちらかす（つたひも）"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["自然を感じる", "水を感じる", "あつまり", "花ざかり", "見て楽しむ"], "isIbe": false, "aji": "にがい"}, {"no": 42, "name": "ストライク", "tokui": ["きをきる"], "kankyo": "あかるい", "hitoshou": "オレ様", "sukimono": ["自然を感じる", "木製", "トレーニングできる", "風を感じる", "とがっている"], "isIbe": false, "aji": "からい"}, {"no": 43, "name": "ハッサム", "tokui": ["きをきる"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["自然を感じる", "メタリック", "木製", "かたい", "トレーニングできる"], "isIbe": false, "aji": "にがい"}, {"no": 44, "name": "カイロス", "tokui": ["きをきる", "けんちく"], "kankyo": "あかるい", "hitoshou": "ワシ", "sukimono": ["自然を感じる", "木製", "花ざかり", "とがっている", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 45, "name": "コイキング", "tokui": ["なし"], "kankyo": "うるおっている", "hitoshou": "ぼく", "sukimono": ["水を感じる", "海を感じる", "みんなで使う", "乗りもの", "ゆれる"], "isIbe": false, "aji": "あまい"}, {"no": 46, "name": "ギャラドス", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "オレ様", "sukimono": ["水を感じる", "海を感じる", "風を感じる", "せいけつ", "ほっそり"], "isIbe": false, "aji": "からい"}, {"no": 47, "name": "メタモン", "tokui": [], "kankyo": null, "hitoshou": null, "sukimono": [], "isIbe": false, "aji": ""}, {"no": 48, "name": "ホーホー", "tokui": ["とりひき", "そらをとぶ"], "kankyo": "くらい", "hitoshou": "ボク", "sukimono": ["やわらかい", "風を感じる", "布仕立て", "ゆれる", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 49, "name": "ヨルノズク", "tokui": ["とりひき", "そらをとぶ"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["やわらかい", "風を感じる", "文字がある", "いれもの", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 50, "name": "ヘラクロス", "tokui": ["きをきる", "けんちく"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["自然を感じる", "木製", "花ざかり", "食べものそっくり", "トレーニングできる"], "isIbe": false, "aji": "あまい"}, {"no": 51, "name": "バルビート", "tokui": ["もりあげる"], "kankyo": "くらい", "hitoshou": "おいら", "sukimono": ["自然を感じる", "木製", "キラキラしてる", "キュート", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 52, "name": "イルミーゼ", "tokui": ["もりあげる"], "kankyo": "くらい", "hitoshou": "アタシ", "sukimono": ["自然を感じる", "木製", "キラキラしてる", "キュート", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 53, "name": "ゴクリン", "tokui": ["しゅうのう"], "kankyo": "うるおっている", "hitoshou": "ボクちん", "sukimono": ["キュート", "食べものそっくり", "まんまる", "いれもの", "カラフル"], "isIbe": false, "aji": "からい"}, {"no": 54, "name": "マルノーム", "tokui": ["しゅうのう"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["ゴミ", "食べものそっくり", "まんまる", "いれもの", "カラフル"], "isIbe": false, "aji": "にがい"}, {"no": 55, "name": "サボネア", "tokui": ["さいばい"], "kankyo": "乾そうしている", "hitoshou": "オラ", "sukimono": ["自然を感じる", "花ざかり", "キュート", "まんまる", "とがっている"], "isIbe": false, "aji": "からい"}, {"no": 56, "name": "ノクタス", "tokui": ["さいばい", "ちらかす（じょうぶなえだ）"], "kankyo": "乾そうしている", "hitoshou": "ボク", "sukimono": ["自然を感じる", "風を感じる", "ゴージャス", "キラキラしてる", "とがっている"], "isIbe": false, "aji": "しぶい"}, {"no": 57, "name": "ミツハニー", "tokui": ["ちらかす（あまいミツ）"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["自然を感じる", "風を感じる", "木製", "あつまり", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 58, "name": "ビークイン", "tokui": ["ミツあつめ", "さがしもの"], "kankyo": "あかるい", "hitoshou": "ワタクシ", "sukimono": ["自然を感じる", "風を感じる", "木製", "あつまり", "難しそうなもの"], "isIbe": false, "aji": "あまい"}, {"no": 59, "name": "カラナクシ(ひがし)", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "わたち", "sukimono": ["水を感じる", "海を感じる", "せいけつ", "カラフル", "いれもの"], "isIbe": false, "aji": "しぶい"}, {"no": 59, "name": "カラナクシ(にし)", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "あたち", "sukimono": ["水を感じる", "海を感じる", "せいけつ", "カラフル", "いれもの"], "isIbe": false, "aji": "すっぱい"}, {"no": 60, "name": "トリトドン(ひがし)", "tokui": ["うるおす", "とりひき"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["水を感じる", "土を感じる", "海を感じる", "せいけつ", "いれもの"], "isIbe": false, "aji": "しぶい"}, {"no": 60, "name": "トリトドン(にし)", "tokui": ["うるおす", "とりひき"], "kankyo": "うるおっている", "hitoshou": "あたし", "sukimono": ["水を感じる", "土を感じる", "海を感じる", "せいけつ", "いれもの"], "isIbe": false, "aji": "すっぱい"}, {"no": 61, "name": "フワンテ", "tokui": ["ゆめしま"], "kankyo": "あたたかい", "hitoshou": "わたし", "sukimono": ["ブキミ", "フシギ", "風を感じる", "キュート", "まんまる"], "isIbe": false, "aji": "にがい"}, {"no": 62, "name": "フワライド", "tokui": ["そらをとぶ", "しわける"], "kankyo": "あたたかい", "hitoshou": "ワタシ", "sukimono": ["ブキミ", "フシギ", "風を感じる", "ゆれる", "まわる"], "isIbe": false, "aji": "にがい"}, {"no": 63, "name": "モグリュー", "tokui": ["さがしもの"], "kankyo": "くらい", "hitoshou": "オイラ", "sukimono": ["土を感じる", "石づくり", "自然を感じる", "見て楽しむ", "とがっている"], "isIbe": false, "aji": "すっぱい"}, {"no": 64, "name": "ドリュウズ", "tokui": ["さがしもの", "きをきる"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["土を感じる", "メタリック", "トレーニングできる", "見て楽しむ", "とがっている"], "isIbe": false, "aji": "すっぱい"}, {"no": 65, "name": "ドッコラー", "tokui": ["けんちく"], "kankyo": "あかるい", "hitoshou": "ワイ", "sukimono": ["トレーニングできる", "けんせつ", "木製", "ほっそり", "四角い"], "isIbe": false, "aji": "からい"}, {"no": 66, "name": "ドテッコツ", "tokui": ["けんちく"], "kankyo": "あかるい", "hitoshou": "オレっち", "sukimono": ["トレーニングできる", "けんせつ", "メタリック", "ほっそり", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 67, "name": "ローブシン", "tokui": ["けんちく", "つぶす"], "kankyo": "あかるい", "hitoshou": "ワシ", "sukimono": ["トレーニングできる", "けんせつ", "石づくり", "ほっそり", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 68, "name": "ヒトモシ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "あたち", "sukimono": ["ブキミ", "フシギ", "炎を感じる", "ゆれる", "四角い"], "isIbe": false, "aji": "にがい"}, {"no": 69, "name": "ランプラー", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "あたし", "sukimono": ["ブキミ", "フシギ", "炎を感じる", "ゆれる", "いれもの"], "isIbe": false, "aji": "にがい"}, {"no": 70, "name": "シャンデラ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "ワタシ", "sukimono": ["ブキミ", "フシギ", "炎を感じる", "ゆれる", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 71, "name": "キバゴ", "tokui": ["きをきる"], "kankyo": "くらい", "hitoshou": "おいら", "sukimono": ["炎を感じる", "ゴージャス", "土を感じる", "かたい", "とがっている"], "isIbe": false, "aji": "あまい"}, {"no": 72, "name": "オノンド", "tokui": ["きをきる"], "kankyo": "くらい", "hitoshou": "オイラ", "sukimono": ["炎を感じる", "ゴージャス", "土を感じる", "トレーニングできる", "とがっている"], "isIbe": false, "aji": "からい"}, {"no": 73, "name": "オノノクス", "tokui": ["きをきる", "ちらかす（ちいさなまるた）"], "kankyo": "くらい", "hitoshou": "わし", "sukimono": ["炎を感じる", "ゴージャス", "土を感じる", "トレーニングできる", "とがっている"], "isIbe": false, "aji": "すっぱい"}, {"no": 74, "name": "ヌメラ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "あたち", "sukimono": ["水を感じる", "ゴージャス", "自然を感じる", "せいけつ", "キズをいやす"], "isIbe": false, "aji": "あまい"}, {"no": 75, "name": "ヌメイル", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "アタシ", "sukimono": ["水を感じる", "ゴージャス", "やわらかい", "せいけつ", "キズをいやす"], "isIbe": false, "aji": "あまい"}, {"no": 76, "name": "ヌメルゴン", "tokui": ["うるおす", "とりひき"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["水を感じる", "ゴージャス", "トレーニングできる", "せいけつ", "キズをいやす"], "isIbe": false, "aji": "すっぱい"}, {"no": 77, "name": "ウッウ", "tokui": ["うるおす", "そらをとぶ"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["風を感じる", "水を感じる", "海を感じる", "ほっそり", "食べものそっくり"], "isIbe": false, "aji": "にがい"}, {"no": 78, "name": "ピチュー", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "ぼく", "sukimono": ["電気で動く", "ガラス入り", "キュート", "花ざかり", "布仕立て"], "isIbe": false, "aji": "あまい"}, {"no": 79, "name": "ピカチュウ(うすいろ)", "tokui": ["はっこう"], "kankyo": "あかるい", "hitoshou": "わたくし", "sukimono": ["電気で動く", "ガラス入り", "キュート", "キズをいやす", "文字がある"], "isIbe": false, "aji": "あまい"}, {"no": 79, "name": "ピカチュウ", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "ぼく", "sukimono": ["電気で動く", "ガラス入り", "みんなで使う", "まんまる", "乗りもの"], "isIbe": false, "aji": "すっぱい"}, {"no": 80, "name": "ライチュウ", "tokui": ["はつでん", "もりあげる"], "kankyo": "あかるい", "hitoshou": "あたし", "sukimono": ["電気で動く", "ガラス入り", "みんなで使う", "まんまる", "あそびば"], "isIbe": false, "aji": ""}, {"no": 81, "name": "ズバット", "tokui": ["さがしもの"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["ブキミ", "風を感じる", "木製", "音が鳴る", "難しそうなもの"], "isIbe": false, "aji": "からい"}, {"no": 82, "name": "ゴルバット", "tokui": ["さがしもの"], "kankyo": "くらい", "hitoshou": "オレ様", "sukimono": ["ブキミ", "風を感じる", "木製", "音が鳴る", "難しそうなもの"], "isIbe": false, "aji": "からい"}, {"no": 83, "name": "クロバット", "tokui": ["さがしもの", "きをきる"], "kankyo": "くらい", "hitoshou": "オイラ", "sukimono": ["ブキミ", "風を感じる", "木製", "ゴミ", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 84, "name": "ニャース", "tokui": ["とりひき"], "kankyo": "すずしい", "hitoshou": "オイラ", "sukimono": ["いれもの", "みんなで使う", "キラキラしてる", "ガラス入り", "ゴージャス"], "isIbe": false, "aji": "からい"}, {"no": 85, "name": "ペルシアン", "tokui": ["とりひき", "さがしもの"], "kankyo": "すずしい", "hitoshou": "あたくし", "sukimono": ["いれもの", "みんなで使う", "キラキラしてる", "見て楽しむ", "ゴージャス"], "isIbe": false, "aji": "すっぱい"}, {"no": 86, "name": "コダック", "tokui": ["さがしもの"], "kankyo": "うるおっている", "hitoshou": "ぼく", "sukimono": ["水を感じる", "海を感じる", "フシギ", "難しそうなもの", "キズをいやす"], "isIbe": false, "aji": "しぶい"}, {"no": 87, "name": "ゴルダック", "tokui": ["さがしもの"], "kankyo": "うるおっている", "hitoshou": "おれ", "sukimono": ["水を感じる", "海を感じる", "フシギ", "難しそうなもの", "とがっている"], "isIbe": false, "aji": "しぶい"}, {"no": 88, "name": "ガーディ", "tokui": ["もやす", "さがしもの"], "kankyo": "あたたかい", "hitoshou": "ボク", "sukimono": ["炎を感じる", "石づくり", "風を感じる", "文字がある", "花ざかり"], "isIbe": false, "aji": "あまい"}, {"no": 89, "name": "ウインディ", "tokui": ["もやす", "さがしもの"], "kankyo": "あたたかい", "hitoshou": "オレ", "sukimono": ["炎を感じる", "石づくり", "風を感じる", "見て楽しむ", "シンボル"], "isIbe": false, "aji": "からい"}, {"no": 90, "name": "カモネギ", "tokui": ["きをきる", "けんちく"], "kankyo": "あたたかい", "hitoshou": "アッシ", "sukimono": ["やわらかい", "風を感じる", "木製", "ほっそり", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 91, "name": "ベトベター", "tokui": ["ちらかす（もえないゴミ）"], "kankyo": "くらい", "hitoshou": "おら", "sukimono": ["ゴミ", "ブキミ", "あつまり", "キラキラしてる", "いれもの"], "isIbe": false, "aji": "にがい"}, {"no": 92, "name": "ベトベトン", "tokui": ["ちらかす（もえないゴミ）"], "kankyo": "くらい", "hitoshou": "オラ", "sukimono": ["ゴミ", "ブキミ", "あつまり", "キラキラしてる", "カラフル"], "isIbe": false, "aji": "にがい"}, {"no": 93, "name": "ゴース", "tokui": ["しわける", "とりひき"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["ブキミ", "フシギ", "ゴミ", "いれもの", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 94, "name": "ゴースト", "tokui": ["しわける", "とりひき"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["ブキミ", "フシギ", "ゴミ", "ゆれる", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 95, "name": "ゲンガー", "tokui": ["しわける", "とりひき"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["ブキミ", "フシギ", "ゴミ", "乗りもの", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 96, "name": "ビリリダマ", "tokui": ["はつでん", "ばくはつ"], "kankyo": "あかるい", "hitoshou": "ジブン", "sukimono": ["電気で動く", "キラキラしてる", "まんまる", "カラフル", "まわる"], "isIbe": false, "aji": "にがい"}, {"no": 97, "name": "マルマイン", "tokui": ["はつでん", "ばくはつ"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["電気で動く", "キラキラしてる", "まんまる", "あそびば", "まわる"], "isIbe": false, "aji": "すっぱい"}, {"no": 98, "name": "タマタマ", "tokui": ["さいばい", "テレポート"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["自然を感じる", "フシギ", "あつまり", "見て楽しむ", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 99, "name": "ナッシー", "tokui": ["さいばい", "テレポート"], "kankyo": "あかるい", "hitoshou": "オイラ", "sukimono": ["自然を感じる", "フシギ", "あつまり", "見て楽しむ", "木製"], "isIbe": false, "aji": "しぶい"}, {"no": 100, "name": "ピンプク", "tokui": ["とりひき"], "kankyo": "あかるい", "hitoshou": "あたち", "sukimono": ["やわらかい", "布仕立て", "キズをいやす", "まんまる", "いれもの"], "isIbe": false, "aji": "あまい"}, {"no": 101, "name": "ラッキー", "tokui": ["とりひき"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "布仕立て", "キズをいやす", "まんまる", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 102, "name": "ハピナス", "tokui": ["とりひき", "ちらかす（いし）"], "kankyo": "あかるい", "hitoshou": "あたし", "sukimono": ["やわらかい", "布仕立て", "キズをいやす", "まんまる", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 103, "name": "エレキッド", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "オイラ", "sukimono": ["電気で動く", "ガラス入り", "キュート", "まんまる", "まわる"], "isIbe": false, "aji": "あまい"}, {"no": 104, "name": "エレブー", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["電気で動く", "ガラス入り", "炎を感じる", "とがっている", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 105, "name": "エレキブル", "tokui": ["はつでん", "つぶす"], "kankyo": "あかるい", "hitoshou": "ワシ", "sukimono": ["電気で動く", "ガラス入り", "炎を感じる", "かたい", "トレーニングできる"], "isIbe": false, "aji": "すっぱい"}, {"no": 106, "name": "ラプラス", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["水を感じる", "海を感じる", "せいけつ", "見て楽しむ", "キズをいやす"], "isIbe": false, "aji": "すっぱい"}, {"no": 107, "name": "ゴンベ", "tokui": ["じならし"], "kankyo": "あたたかい", "hitoshou": "オラ", "sukimono": ["やわらかい", "自然を感じる", "食べものそっくり", "ゆれる", "みんなで使う"], "isIbe": false, "aji": "しぶい"}, {"no": 108, "name": "カビゴン(こけむし)", "tokui": ["くいしんぼ"], "kankyo": "あかるい", "hitoshou": null, "sukimono": ["やわらかい", "布仕立て", "食べものそっくり", "見て楽しむ", "フシギ"], "isIbe": false, "aji": "からい"}, {"no": 108, "name": "カビゴン", "tokui": ["とりひき", "じならし"], "kankyo": "あたたかい", "hitoshou": "おいら", "sukimono": ["やわらかい", "布仕立て", "食べものそっくり", "ゆれる", "乗りもの"], "isIbe": false, "aji": "しぶい"}, {"no": 109, "name": "イトマル", "tokui": ["ちらかす（いとくず）"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "木製", "ゴミ", "乗りもの", "カラフル"], "isIbe": false, "aji": "にがい"}, {"no": 110, "name": "アリアドス", "tokui": ["ちらかす（いとくず）"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "木製", "ゴミ", "乗りもの", "カラフル"], "isIbe": false, "aji": "すっぱい"}, {"no": 111, "name": "メリープ", "tokui": ["はつでん", "ちらかす（わた）"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["電気で動く", "キラキラしてる", "ガラス入り", "キュート", "布仕立て"], "isIbe": false, "aji": "あまい"}, {"no": 112, "name": "モココ", "tokui": ["はつでん", "ちらかす（わた）"], "kankyo": "あかるい", "hitoshou": "うち", "sukimono": ["電気で動く", "キラキラしてる", "ガラス入り", "キュート", "乗りもの"], "isIbe": false, "aji": "にがい"}, {"no": 113, "name": "デンリュウ", "tokui": ["はつでん", "とりひき"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["電気で動く", "キラキラしてる", "ガラス入り", "キュート", "花ざかり"], "isIbe": false, "aji": "すっぱい"}, {"no": 114, "name": "ルリリ", "tokui": ["うるおす", "もりあげる"], "kankyo": "うるおっている", "hitoshou": "あたち", "sukimono": ["水を感じる", "キュート", "せいけつ", "キズをいやす", "乗りもの"], "isIbe": false, "aji": "すっぱい"}, {"no": 115, "name": "マリル", "tokui": ["うるおす", "もりあげる"], "kankyo": "うるおっている", "hitoshou": "うち", "sukimono": ["水を感じる", "キュート", "せいけつ", "まんまる", "シンボル"], "isIbe": false, "aji": "すっぱい"}, {"no": 116, "name": "マリルリ", "tokui": ["うるおす", "けんちく"], "kankyo": "うるおっている", "hitoshou": "あたし", "sukimono": ["水を感じる", "キュート", "けんせつ", "ゆれる", "シンボル"], "isIbe": false, "aji": "すっぱい"}, {"no": 117, "name": "パルデアウパー", "tokui": ["ちらかす（ぐにゃぐにゃねんど）"], "kankyo": "うるおっている", "hitoshou": "あたち", "sukimono": ["ゴミ", "土を感じる", "石づくり", "せいけつ", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 118, "name": "ドオー", "tokui": ["ちらかす（ぐにゃぐにゃねんど）", "じならし"], "kankyo": "うるおっている", "hitoshou": "オデ", "sukimono": ["ゴミ", "土を感じる", "水を感じる", "せいけつ", "まんまる"], "isIbe": false, "aji": "にがい"}, {"no": 119, "name": "ドーブル(ペインター)", "tokui": ["ペイント"], "kankyo": "あかるい", "hitoshou": "ぼく", "sukimono": ["やわらかい", "布仕立て", "フシギ", "カラフル", "キラキラしてる"], "isIbe": false, "aji": "しぶい"}, {"no": 120, "name": "アチャモ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "うち", "sukimono": ["炎を感じる", "石づくり", "キュート", "いれもの", "花ざかり"], "isIbe": false, "aji": "あまい"}, {"no": 121, "name": "ワカシャモ", "tokui": ["もやす", "けんちく"], "kankyo": "あたたかい", "hitoshou": "あたい", "sukimono": ["炎を感じる", "石づくり", "トレーニングできる", "いれもの", "けんせつ"], "isIbe": false, "aji": "からい"}, {"no": 122, "name": "バシャーモ", "tokui": ["もやす", "けんちく"], "kankyo": "あたたかい", "hitoshou": "おいら", "sukimono": ["炎を感じる", "ゴージャス", "トレーニングできる", "いれもの", "けんせつ"], "isIbe": false, "aji": "からい"}, {"no": 123, "name": "キャモメ", "tokui": ["うるおす", "そらをとぶ"], "kankyo": "うるおっている", "hitoshou": "あたし", "sukimono": ["水を感じる", "風を感じる", "せいけつ", "海を感じる", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 124, "name": "ペリッパー", "tokui": ["うるおす", "そらをとぶ"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["水を感じる", "風を感じる", "せいけつ", "海を感じる", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 125, "name": "マクノシタ", "tokui": ["けんちく", "じならし"], "kankyo": "あかるい", "hitoshou": "オレっち", "sukimono": ["トレーニングできる", "けんせつ", "布仕立て", "まんまる", "木製"], "isIbe": false, "aji": "あまい"}, {"no": 126, "name": "ハリテヤマ", "tokui": ["けんちく", "じならし"], "kankyo": "あかるい", "hitoshou": "ワシ", "sukimono": ["トレーニングできる", "けんせつ", "布仕立て", "まんまる", "乗りもの"], "isIbe": false, "aji": "からい"}, {"no": 127, "name": "アブソル", "tokui": ["きをきる"], "kankyo": "くらい", "hitoshou": "わたし", "sukimono": ["やわらかい", "風を感じる", "文字がある", "難しそうなもの", "トレーニングできる"], "isIbe": false, "aji": "しぶい"}, {"no": 128, "name": "ポッチャマ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "ボク", "sukimono": ["水を感じる", "海を感じる", "風を感じる", "せいけつ", "いれもの"], "isIbe": false, "aji": "あまい"}, {"no": 129, "name": "ポッタイシ", "tokui": ["うるおす", "とりひき"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["水を感じる", "海を感じる", "風を感じる", "せいけつ", "いれもの"], "isIbe": false, "aji": "しぶい"}, {"no": 130, "name": "エンペルト", "tokui": ["うるおす", "とりひき"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["水を感じる", "海を感じる", "メタリック", "せいけつ", "文字がある"], "isIbe": false, "aji": "にがい"}, {"no": 131, "name": "タブンネ", "tokui": ["とりひき"], "kankyo": "あかるい", "hitoshou": "うち", "sukimono": ["やわらかい", "布仕立て", "キズをいやす", "キュート", "まんまる"], "isIbe": false, "aji": "にがい"}, {"no": 132, "name": "ヤブクロン", "tokui": ["リサイクル", "ちらかす（もえないゴミ）"], "kankyo": "うるおっている", "hitoshou": "オラ", "sukimono": ["ゴミ", "いれもの", "難しそうなもの", "キラキラしてる", "あつまり"], "isIbe": false, "aji": "にがい"}, {"no": 133, "name": "ダストダス", "tokui": ["リサイクル", "ちらかす（もえないゴミ）"], "kankyo": "うるおっている", "hitoshou": "あたし", "sukimono": ["ゴミ", "いれもの", "難しそうなもの", "キラキラしてる", "あつまり"], "isIbe": false, "aji": "すっぱい"}, {"no": 134, "name": "ゾロア", "tokui": ["とりひき"], "kankyo": "くらい", "hitoshou": "あたい", "sukimono": ["キラキラしてる", "ゴージャス", "ガラス入り", "キュート", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 135, "name": "ゾロアーク", "tokui": ["とりひき", "きをきる"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["キラキラしてる", "ゴージャス", "ガラス入り", "フシギ", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 136, "name": "チラーミィ", "tokui": ["しわける"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "布仕立て", "乗りもの", "キュート", "せいけつ"], "isIbe": false, "aji": "あまい"}, {"no": 137, "name": "チラチーノ", "tokui": ["しわける", "リサイクル"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "布仕立て", "乗りもの", "キュート", "せいけつ"], "isIbe": false, "aji": "すっぱい"}, {"no": 138, "name": "アゴジムシ", "tokui": ["きをきる"], "kankyo": "あかるい", "hitoshou": "ボク", "sukimono": ["自然を感じる", "電気で動く", "見て楽しむ", "土を感じる", "いれもの"], "isIbe": false, "aji": "しぶい"}, {"no": 139, "name": "デンヂムシ", "tokui": ["はつでん", "きをきる"], "kankyo": "あかるい", "hitoshou": "オイラ", "sukimono": ["自然を感じる", "電気で動く", "見て楽しむ", "ガラス入り", "四角い"], "isIbe": false, "aji": "にがい"}, {"no": 140, "name": "クワガノン", "tokui": ["はつでん", "きをきる"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["自然を感じる", "電気で動く", "トレーニングできる", "ガラス入り", "風を感じる"], "isIbe": false, "aji": "しぶい"}, {"no": 141, "name": "ミミッキュ", "tokui": ["とりひき"], "kankyo": "くらい", "hitoshou": "ボク", "sukimono": ["ブキミ", "キュート", "電気で動く", "布仕立て", "みんなで使う"], "isIbe": false, "aji": "にがい"}, {"no": 142, "name": "パモ", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "あたち", "sukimono": ["電気で動く", "キラキラしてる", "キュート", "ガラス入り", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 143, "name": "パモット", "tokui": ["はつでん", "つぶす"], "kankyo": "あかるい", "hitoshou": "あたし", "sukimono": ["電気で動く", "キラキラしてる", "トレーニングできる", "ガラス入り", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 144, "name": "パーモット", "tokui": ["はつでん", "つぶす"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["いれもの", "キラキラしてる", "トレーニングできる", "キズをいやす", "みんなで使う"], "isIbe": false, "aji": "しぶい"}, {"no": 145, "name": "シャリタツ(たれたすがた)", "tokui": ["とりひき"], "kankyo": "うるおっている", "hitoshou": "わい", "sukimono": ["水を感じる", "海を感じる", "みんなで使う", "まわる", "四角い"], "isIbe": false, "aji": "あまい"}, {"no": 145, "name": "シャリタツ(のびたすがた)", "tokui": ["とりひき"], "kankyo": "うるおっている", "hitoshou": "ぼく", "sukimono": ["水を感じる", "海を感じる", "みんなで使う", "文字がある", "いれもの"], "isIbe": false, "aji": "からい"}, {"no": 145, "name": "シャリタツ(そったすがた)", "tokui": ["とりひき"], "kankyo": "うるおっている", "hitoshou": "おいら", "sukimono": ["水を感じる", "海を感じる", "みんなで使う", "ほっそり", "あつまり"], "isIbe": false, "aji": "すっぱい"}, {"no": 146, "name": "アーボ", "tokui": ["さがしもの"], "kankyo": "くらい", "hitoshou": "おいら", "sukimono": ["ゴミ", "見て楽しむ", "自然を感じる", "ほっそり", "まわる"], "isIbe": false, "aji": "からい"}, {"no": 147, "name": "アーボック", "tokui": ["さがしもの"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["ゴミ", "見て楽しむ", "自然を感じる", "ほっそり", "まわる"], "isIbe": false, "aji": "からい"}, {"no": 148, "name": "ピィ", "tokui": ["もりあげる"], "kankyo": "くらい", "hitoshou": "あたち", "sukimono": ["キュート", "まんまる", "カラフル", "キズをいやす", "乗りもの"], "isIbe": false, "aji": "あまい"}, {"no": 149, "name": "ピッピ", "tokui": ["もりあげる"], "kankyo": "くらい", "hitoshou": "あたし", "sukimono": ["キュート", "あそびば", "花ざかり", "キズをいやす", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 150, "name": "ピクシー", "tokui": ["もりあげる", "とりひき"], "kankyo": "くらい", "hitoshou": "わたし", "sukimono": ["キュート", "あそびば", "花ざかり", "キズをいやす", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 151, "name": "ププリン", "tokui": ["もりあげる"], "kankyo": "あたたかい", "hitoshou": "あたち", "sukimono": ["やわらかい", "キュート", "あそびば", "キズをいやす", "音が鳴る"], "isIbe": false, "aji": "あまい"}, {"no": 152, "name": "プリン", "tokui": ["もりあげる"], "kankyo": "あかるい", "hitoshou": "あたし", "sukimono": ["やわらかい", "キュート", "あそびば", "キズをいやす", "ゆれる"], "isIbe": false, "aji": "あまい"}, {"no": 153, "name": "プクリン", "tokui": ["もりあげる", "とりひき"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "キュート", "あそびば", "キズをいやす", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 154, "name": "ディグダ", "tokui": ["もりあげる"], "kankyo": "くらい", "hitoshou": "わたし", "sukimono": ["土を感じる", "あそびば", "キュート", "みんなで使う", "ほっそり"], "isIbe": false, "aji": "にがい"}, {"no": 155, "name": "ダグトリオ", "tokui": ["もりあげる", "つぶす"], "kankyo": "くらい", "hitoshou": "オレっち", "sukimono": ["土を感じる", "あそびば", "あつまり", "みんなで使う", "ほっそり"], "isIbe": false, "aji": "からい"}, {"no": 156, "name": "ワンリキー", "tokui": ["けんちく", "しわける"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["トレーニングできる", "せいけつ", "石づくり", "かたい", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 157, "name": "ゴーリキー", "tokui": ["けんちく", "しわける"], "kankyo": "あかるい", "hitoshou": "おれ", "sukimono": ["トレーニングできる", "けんせつ", "石づくり", "かたい", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 158, "name": "カイリキー", "tokui": ["けんちく", "しわける"], "kankyo": "あかるい", "hitoshou": "オレっち", "sukimono": ["トレーニングできる", "けんせつ", "石づくり", "かたい", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 159, "name": "イシツブテ", "tokui": ["つぶす"], "kankyo": "くらい", "hitoshou": "おいら", "sukimono": ["石づくり", "かたい", "まわる", "まんまる", "トレーニングできる"], "isIbe": false, "aji": "しぶい"}, {"no": 160, "name": "ゴローン", "tokui": ["つぶす"], "kankyo": "くらい", "hitoshou": "おら", "sukimono": ["石づくり", "かたい", "まわる", "まんまる", "トレーニングできる"], "isIbe": false, "aji": "にがい"}, {"no": 161, "name": "ゴローニャ", "tokui": ["つぶす", "とりひき"], "kankyo": "くらい", "hitoshou": "アタシ", "sukimono": ["石づくり", "かたい", "まわる", "まんまる", "トレーニングできる"], "isIbe": false, "aji": "すっぱい"}, {"no": 162, "name": "ブビィ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "あたち", "sukimono": ["炎を感じる", "石づくり", "見て楽しむ", "キュート", "ゆれる"], "isIbe": false, "aji": "あまい"}, {"no": 163, "name": "ブーバー", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "ボク", "sukimono": ["炎を感じる", "石づくり", "電気で動く", "かたい", "トレーニングできる"], "isIbe": false, "aji": "あまい"}, {"no": 164, "name": "ブーバーン", "tokui": ["もやす", "つぶす"], "kankyo": "あたたかい", "hitoshou": "おら", "sukimono": ["炎を感じる", "石づくり", "電気で動く", "かたい", "トレーニングできる"], "isIbe": false, "aji": "しぶい"}, {"no": 165, "name": "ウソハチ", "tokui": ["じならし"], "kankyo": "乾そうしている", "hitoshou": "ワタシ", "sukimono": ["石づくり", "かたい", "自然を感じる", "木製", "まんまる"], "isIbe": false, "aji": "すっぱい"}, {"no": 166, "name": "ウソッキー", "tokui": ["とりひき"], "kankyo": "乾そうしている", "hitoshou": "オラ", "sukimono": ["石づくり", "かたい", "自然を感じる", "木製", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 167, "name": "ヤミカラス", "tokui": ["とりひき", "そらをとぶ"], "kankyo": "くらい", "hitoshou": "アッシ", "sukimono": ["キラキラしてる", "風を感じる", "みんなで使う", "ゴージャス", "布仕立て"], "isIbe": false, "aji": "にがい"}, {"no": 168, "name": "ドンカラス", "tokui": ["とりひき", "そらをとぶ"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["キラキラしてる", "風を感じる", "ブキミ", "文字がある", "ガラス入り"], "isIbe": false, "aji": "にがい"}, {"no": 169, "name": "ヨーギラス", "tokui": ["つぶす", "じならし"], "kankyo": "くらい", "hitoshou": "オラ", "sukimono": ["石づくり", "土を感じる", "ゴージャス", "キラキラしてる", "食べものそっくり"], "isIbe": false, "aji": "あまい"}, {"no": 170, "name": "サナギラス", "tokui": ["つぶす", "じならし"], "kankyo": "くらい", "hitoshou": "オイラ", "sukimono": ["石づくり", "かたい", "ゴージャス", "キラキラしてる", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 171, "name": "バンギラス", "tokui": ["つぶす", "じならし"], "kankyo": "くらい", "hitoshou": "ワシ", "sukimono": ["石づくり", "かたい", "ゴージャス", "キラキラしてる", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 172, "name": "ハスボー", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["水を感じる", "自然を感じる", "せいけつ", "いれもの", "音が鳴る"], "isIbe": false, "aji": "しぶい"}, {"no": 173, "name": "ハスブレロ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "わい", "sukimono": ["水を感じる", "自然を感じる", "せいけつ", "いれもの", "音が鳴る"], "isIbe": false, "aji": "にがい"}, {"no": 174, "name": "ルンパッパ", "tokui": ["うるおす", "もりあげる"], "kankyo": "うるおっている", "hitoshou": "おら", "sukimono": ["水を感じる", "自然を感じる", "あそびば", "いれもの", "音が鳴る"], "isIbe": false, "aji": "しぶい"}, {"no": 175, "name": "クチート", "tokui": ["とりひき", "けんちく"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["メタリック", "キュート", "カラフル", "食べものそっくり", "みんなで使う"], "isIbe": false, "aji": "しぶい"}, {"no": 176, "name": "コータス", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "わし", "sukimono": ["炎を感じる", "石づくり", "メタリック", "かたい", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 177, "name": "コロボーシ", "tokui": ["もりあげる"], "kankyo": "くらい", "hitoshou": "オラ", "sukimono": ["自然を感じる", "木製", "音が鳴る", "カラフル", "見て楽しむ"], "isIbe": false, "aji": "にがい"}, {"no": 178, "name": "コロトック", "tokui": ["もりあげる"], "kankyo": "くらい", "hitoshou": "オイラ", "sukimono": ["自然を感じる", "木製", "音が鳴る", "カラフル", "見て楽しむ"], "isIbe": false, "aji": "からい"}, {"no": 179, "name": "ペラップ", "tokui": ["もりあげる", "そらをとぶ"], "kankyo": "あたたかい", "hitoshou": "ワタシ", "sukimono": ["風を感じる", "布仕立て", "ほっそり", "あそびば", "音が鳴る"], "isIbe": false, "aji": "あまい"}, {"no": 180, "name": "リオル", "tokui": ["けんちく"], "kankyo": "くらい", "hitoshou": "ボク", "sukimono": ["トレーニングできる", "布仕立て", "けんせつ", "あつまり", "見て楽しむ"], "isIbe": false, "aji": "からい"}, {"no": 181, "name": "ルカリオ", "tokui": ["けんちく"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["トレーニングできる", "メタリック", "けんせつ", "難しそうなもの", "キズをいやす"], "isIbe": false, "aji": "しぶい"}, {"no": 182, "name": "ステレオロトム", "tokui": ["DJ"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["キラキラしてる", "ガラス入り", "音が鳴る", "みんなで使う", "四角い"], "isIbe": false, "aji": "にがい"}, {"no": 183, "name": "メラルバ", "tokui": ["もやす", "ちらかす（いとくず）"], "kankyo": "乾そうしている", "hitoshou": "うち", "sukimono": ["自然を感じる", "炎を感じる", "とがっている", "木製", "シンボル"], "isIbe": false, "aji": "にがい"}, {"no": 184, "name": "ウルガモス", "tokui": ["もやす", "ちらかす（いとくず）"], "kankyo": "乾そうしている", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "炎を感じる", "文字がある", "木製", "シンボル"], "isIbe": false, "aji": "しぶい"}, {"no": 185, "name": "モクロー", "tokui": ["さいばい"], "kankyo": "くらい", "hitoshou": "ぼく", "sukimono": ["自然を感じる", "木製", "風を感じる", "いれもの", "まわる"], "isIbe": false, "aji": "しぶい"}, {"no": 186, "name": "フクスロー", "tokui": ["さいばい", "きをきる"], "kankyo": "くらい", "hitoshou": "ボク", "sukimono": ["自然を感じる", "木製", "風を感じる", "ほっそり", "せいけつ"], "isIbe": false, "aji": "すっぱい"}, {"no": 187, "name": "ジュナイパー", "tokui": ["さいばい", "きをきる"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "ブキミ", "木製", "風を感じる", "文字がある"], "isIbe": false, "aji": "しぶい"}, {"no": 188, "name": "ヒバニー", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "ぼくちん", "sukimono": ["炎を感じる", "石づくり", "やわらかい", "みんなで使う", "とがっている"], "isIbe": false, "aji": "しぶい"}, {"no": 189, "name": "ラビフット", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "ぼく", "sukimono": ["炎を感じる", "石づくり", "あそびば", "みんなで使う", "いれもの"], "isIbe": false, "aji": "しぶい"}, {"no": 190, "name": "エースバーン", "tokui": ["もやす", "もりあげる"], "kankyo": "あたたかい", "hitoshou": "おれ", "sukimono": ["炎を感じる", "石づくり", "あそびば", "みんなで使う", "まんまる"], "isIbe": false, "aji": "からい"}, {"no": 191, "name": "ホシガリス", "tokui": ["さがしもの", "もりあげる"], "kankyo": "あたたかい", "hitoshou": "オイラ", "sukimono": ["やわらかい", "木製", "見て楽しむ", "食べものそっくり", "まんまる"], "isIbe": false, "aji": "しぶい"}, {"no": 192, "name": "ヨクバリス(コック)", "tokui": ["パーティー"], "kankyo": "あたたかい", "hitoshou": "アタシ", "sukimono": ["やわらかい", "メタリック", "みんなで使う", "食べものそっくり", "ゴージャス"], "isIbe": false, "aji": "あまい"}, {"no": 193, "name": "タンドン", "tokui": ["もやす", "しわける"], "kankyo": "あたたかい", "hitoshou": "オレ", "sukimono": ["石づくり", "炎を感じる", "かたい", "メタリック", "乗りもの"], "isIbe": false, "aji": "すっぱい"}, {"no": 194, "name": "トロッゴン", "tokui": ["もやす", "しわける"], "kankyo": "あたたかい", "hitoshou": "オレ", "sukimono": ["石づくり", "炎を感じる", "かたい", "メタリック", "乗りもの"], "isIbe": false, "aji": "からい"}, {"no": 195, "name": "セキタンザン", "tokui": ["もやす", "しわける"], "kankyo": "あたたかい", "hitoshou": "ワシ", "sukimono": ["石づくり", "炎を感じる", "かたい", "メタリック", "乗りもの"], "isIbe": false, "aji": "からい"}, {"no": 196, "name": "エレズン", "tokui": ["はつでん"], "kankyo": "うるおっている", "hitoshou": "おれっち", "sukimono": ["電気で動く", "キラキラしてる", "音が鳴る", "ガラス入り", "ゴミ"], "isIbe": false, "aji": "あまい"}, {"no": 197, "name": "ストリンダー(ロー)", "tokui": ["はつでん", "もりあげる"], "kankyo": "うるおっている", "hitoshou": "ボク", "sukimono": ["電気で動く", "あそびば", "音が鳴る", "ほっそり", "とがっている"], "isIbe": false, "aji": "にがい"}, {"no": 197, "name": "ストリンダー(ハイ)", "tokui": ["はつでん", "もりあげる"], "kankyo": "うるおっている", "hitoshou": "オレさま", "sukimono": ["電気で動く", "あそびば", "音が鳴る", "ほっそり", "とがっている"], "isIbe": false, "aji": "からい"}, {"no": 198, "name": "パピモッチ", "tokui": ["さがしもの"], "kankyo": "あたたかい", "hitoshou": "あたし", "sukimono": ["キュート", "見て楽しむ", "やわらかい", "炎を感じる", "文字がある"], "isIbe": false, "aji": "あまい"}, {"no": 199, "name": "バウッツェル", "tokui": ["さがしもの", "とりひき"], "kankyo": "あたたかい", "hitoshou": "私", "sukimono": ["キュート", "見て楽しむ", "みんなで使う", "炎を感じる", "食べものそっくり"], "isIbe": false, "aji": "すっぱい"}, {"no": 200, "name": "カルボウ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "おれ", "sukimono": ["炎を感じる", "石づくり", "フシギ", "トレーニングできる", "ゴージャス"], "isIbe": false, "aji": "あまい"}, {"no": 201, "name": "グレンアルマ", "tokui": ["もやす", "とりひき"], "kankyo": "あたたかい", "hitoshou": "わたし", "sukimono": ["炎を感じる", "石づくり", "フシギ", "トレーニングできる", "ゴージャス"], "isIbe": false, "aji": "からい"}, {"no": 202, "name": "ソウブレイズ", "tokui": ["もやす", "とりひき"], "kankyo": "あたたかい", "hitoshou": "ボク", "sukimono": ["炎を感じる", "石づくり", "ブキミ", "フシギ", "ゴージャス"], "isIbe": false, "aji": "にがい"}, {"no": 203, "name": "キラーメ", "tokui": ["ちらかす（てつ）"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["石づくり", "かたい", "ゴミ", "キラキラしてる", "難しそうなもの"], "isIbe": false, "aji": "にがい"}, {"no": 204, "name": "キラフロル", "tokui": ["ちらかす（てつ）"], "kankyo": "くらい", "hitoshou": "ワタクシ", "sukimono": ["石づくり", "かたい", "ゴミ", "キラキラしてる", "難しそうなもの"], "isIbe": false, "aji": "にがい"}, {"no": 205, "name": "コレクレー", "tokui": ["コレクター"], "kankyo": "くらい", "hitoshou": "ワイ", "sukimono": ["ブキミ", "メタリック", "フシギ", "キラキラしてる", "難しそうなもの"], "isIbe": false, "aji": "にがい"}, {"no": 206, "name": "サーフゴー", "tokui": ["コレクター"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["ブキミ", "メタリック", "フシギ", "キラキラしてる", "難しそうなもの"], "isIbe": false, "aji": "しぶい"}, {"no": 207, "name": "ロコン", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "あたし", "sukimono": ["炎を感じる", "やわらかい", "キュート", "まんまる", "花ざかり"], "isIbe": false, "aji": "にがい"}, {"no": 208, "name": "キュウコン", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "ワタクシ", "sukimono": ["炎を感じる", "やわらかい", "見て楽しむ", "ゴージャス", "花ざかり"], "isIbe": false, "aji": "しぶい"}, {"no": 209, "name": "ニョロモ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "わたし", "sukimono": ["水を感じる", "せいけつ", "まんまる", "乗りもの", "まわる"], "isIbe": false, "aji": "あまい"}, {"no": 210, "name": "ニョロゾ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "ぼくちん", "sukimono": ["水を感じる", "せいけつ", "自然を感じる", "トレーニングできる", "まわる"], "isIbe": false, "aji": "にがい"}, {"no": 211, "name": "ニョロボン", "tokui": ["うるおす", "けんちく"], "kankyo": "うるおっている", "hitoshou": "オレ", "sukimono": ["水を感じる", "せいけつ", "けんせつ", "トレーニングできる", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 212, "name": "ニョロトノ", "tokui": ["うるおす", "もりあげる"], "kankyo": "うるおっている", "hitoshou": "あたし", "sukimono": ["水を感じる", "あそびば", "音が鳴る", "あつまり", "みんなで使う"], "isIbe": false, "aji": "すっぱい"}, {"no": 213, "name": "ケーシィ", "tokui": ["テレポート"], "kankyo": "くらい", "hitoshou": "ぼく", "sukimono": ["フシギ", "ゆれる", "メタリック", "やわらかい", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 214, "name": "ユンゲラー", "tokui": ["テレポート"], "kankyo": "くらい", "hitoshou": "ボク", "sukimono": ["フシギ", "ゆれる", "メタリック", "いれもの", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 215, "name": "フーディン", "tokui": ["テレポート", "とりひき"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["フシギ", "ゆれる", "メタリック", "文字がある", "見て楽しむ"], "isIbe": false, "aji": "にがい"}, {"no": 216, "name": "マネネ", "tokui": ["しわける"], "kankyo": "あかるい", "hitoshou": "あたい", "sukimono": ["フシギ", "キュート", "乗りもの", "あそびば", "カラフル"], "isIbe": false, "aji": "あまい"}, {"no": 217, "name": "バリヤード", "tokui": ["しわける", "けんちく"], "kankyo": "あかるい", "hitoshou": "オイラ", "sukimono": ["フシギ", "キュート", "乗りもの", "ゆれる", "見て楽しむ"], "isIbe": false, "aji": "にがい"}, {"no": 218, "name": "ポリゴン", "tokui": ["リサイクル"], "kankyo": "あかるい", "hitoshou": "ワタシ", "sukimono": ["やわらかい", "フシギ", "四角い", "けんせつ", "カラフル"], "isIbe": false, "aji": "にがい"}, {"no": 219, "name": "ポリゴン２", "tokui": ["リサイクル"], "kankyo": "あかるい", "hitoshou": "ボク", "sukimono": ["やわらかい", "フシギ", "まんまる", "けんせつ", "カラフル"], "isIbe": false, "aji": "すっぱい"}, {"no": 220, "name": "ポリゴンZ", "tokui": ["レアもの"], "kankyo": "あかるい", "hitoshou": "ワタシ", "sukimono": ["やわらかい", "フシギ", "布仕立て", "見て楽しむ", "カラフル"], "isIbe": false, "aji": "しぶい"}, {"no": 221, "name": "ミニリュウ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "うち", "sukimono": ["水を感じる", "炎を感じる", "せいけつ", "キュート", "ほっそり"], "isIbe": false, "aji": "あまい"}, {"no": 222, "name": "ハクリュー", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["水を感じる", "炎を感じる", "せいけつ", "ガラス入り", "ほっそり"], "isIbe": false, "aji": "あまい"}, {"no": 223, "name": "カイリュー", "tokui": ["うるおす", "そらをとぶ"], "kankyo": "うるおっている", "hitoshou": "私", "sukimono": ["炎を感じる", "風を感じる", "せいけつ", "シンボル", "花ざかり"], "isIbe": false, "aji": "しぶい"}, {"no": 224, "name": "ヒノアラシ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "おれ", "sukimono": ["炎を感じる", "布仕立て", "ほっそり", "メタリック", "乗りもの"], "isIbe": false, "aji": "あまい"}, {"no": 225, "name": "マグマラシ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "おれっち", "sukimono": ["炎を感じる", "布仕立て", "ほっそり", "メタリック", "乗りもの"], "isIbe": false, "aji": "あまい"}, {"no": 226, "name": "バクフーン", "tokui": ["もやす", "とりひき"], "kankyo": "あたたかい", "hitoshou": "おれ様", "sukimono": ["炎を感じる", "布仕立て", "ほっそり", "メタリック", "乗りもの"], "isIbe": false, "aji": "しぶい"}, {"no": 227, "name": "ムウマ", "tokui": ["とりひき"], "kankyo": "くらい", "hitoshou": "あたし", "sukimono": ["ブキミ", "フシギ", "キラキラしてる", "カラフル", "見て楽しむ"], "isIbe": false, "aji": "しぶい"}, {"no": 228, "name": "ムウマージ", "tokui": ["しわける", "とりひき"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["ブキミ", "フシギ", "音が鳴る", "ゆれる", "みんなで使う"], "isIbe": false, "aji": "にがい"}, {"no": 229, "name": "キリンリキ", "tokui": ["しわける"], "kankyo": "あたたかい", "hitoshou": "アタシ", "sukimono": ["やわらかい", "フシギ", "乗りもの", "見て楽しむ", "ほっそり"], "isIbe": false, "aji": "すっぱい"}, {"no": 230, "name": "リキキリン", "tokui": ["しわける", "さがしもの"], "kankyo": "あたたかい", "hitoshou": "あたし", "sukimono": ["やわらかい", "フシギ", "乗りもの", "見て楽しむ", "ほっそり"], "isIbe": false, "aji": "すっぱい"}, {"no": 231, "name": "ラルトス", "tokui": ["テレポート"], "kankyo": "あかるい", "hitoshou": "あたち", "sukimono": ["フシギ", "キュート", "キズをいやす", "見て楽しむ", "シンボル"], "isIbe": false, "aji": "あまい"}, {"no": 232, "name": "キルリア", "tokui": ["テレポート"], "kankyo": "あかるい", "hitoshou": "私", "sukimono": ["フシギ", "キュート", "キズをいやす", "見て楽しむ", "シンボル"], "isIbe": false, "aji": "あまい"}, {"no": 233, "name": "サーナイト", "tokui": ["テレポート", "とりひき"], "kankyo": "あかるい", "hitoshou": "わたくし", "sukimono": ["フシギ", "ゴージャス", "キズをいやす", "見て楽しむ", "シンボル"], "isIbe": false, "aji": "すっぱい"}, {"no": 234, "name": "エルレイド", "tokui": ["テレポート", "けんちく"], "kankyo": "あかるい", "hitoshou": "ワタシ", "sukimono": ["フシギ", "トレーニングできる", "キズをいやす", "けんせつ", "布仕立て"], "isIbe": false, "aji": "からい"}, {"no": 235, "name": "プラスル", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["電気で動く", "ガラス入り", "やわらかい", "キュート", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 236, "name": "マイナン", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "ボク", "sukimono": ["電気で動く", "ガラス入り", "やわらかい", "キュート", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 237, "name": "ナックラー", "tokui": ["じならし", "ちらかす（ぐにゃぐにゃねんど）"], "kankyo": "乾そうしている", "hitoshou": "おいら", "sukimono": ["土を感じる", "かたい", "フシギ", "見て楽しむ", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 238, "name": "ビブラーバ", "tokui": ["じならし", "そらをとぶ"], "kankyo": "乾そうしている", "hitoshou": "アタシ", "sukimono": ["土を感じる", "炎を感じる", "自然を感じる", "ゴージャス", "音が鳴る"], "isIbe": false, "aji": "にがい"}, {"no": 239, "name": "フライゴン", "tokui": ["じならし", "そらをとぶ"], "kankyo": "乾そうしている", "hitoshou": "ワタシ", "sukimono": ["土を感じる", "炎を感じる", "自然を感じる", "石づくり", "木製"], "isIbe": false, "aji": "すっぱい"}, {"no": 240, "name": "チルット", "tokui": ["ちらかす（わた）"], "kankyo": "あかるい", "hitoshou": "あたし", "sukimono": ["やわらかい", "風を感じる", "キュート", "見て楽しむ", "せいけつ"], "isIbe": false, "aji": "あまい"}, {"no": 241, "name": "チルタリス", "tokui": ["ちらかす（わた）", "そらをとぶ"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "風を感じる", "キュート", "見て楽しむ", "音が鳴る"], "isIbe": false, "aji": "すっぱい"}, {"no": 242, "name": "ヨマワル", "tokui": ["しわける"], "kankyo": "くらい", "hitoshou": "ボク", "sukimono": ["ブキミ", "フシギ", "乗りもの", "ガラス入り", "布仕立て"], "isIbe": false, "aji": "にがい"}, {"no": 243, "name": "サマヨール", "tokui": ["しわける"], "kankyo": "くらい", "hitoshou": "オレ", "sukimono": ["ブキミ", "フシギ", "乗りもの", "やわらかい", "いれもの"], "isIbe": false, "aji": "すっぱい"}, {"no": 244, "name": "ヨノワール", "tokui": ["しわける", "とりひき"], "kankyo": "くらい", "hitoshou": "ワシ", "sukimono": ["ブキミ", "フシギ", "乗りもの", "みんなで使う", "いれもの"], "isIbe": false, "aji": "にがい"}, {"no": 245, "name": "ダンバル", "tokui": ["リサイクル"], "kankyo": "すずしい", "hitoshou": "ボク", "sukimono": ["メタリック", "フシギ", "かたい", "難しそうなもの", "石づくり"], "isIbe": false, "aji": "すっぱい"}, {"no": 246, "name": "メタング", "tokui": ["リサイクル"], "kankyo": "すずしい", "hitoshou": "ワタシ", "sukimono": ["メタリック", "フシギ", "かたい", "難しそうなもの", "石づくり"], "isIbe": false, "aji": "にがい"}, {"no": 247, "name": "メタグロス", "tokui": ["リサイクル", "つぶす"], "kankyo": "すずしい", "hitoshou": "ワタシ", "sukimono": ["メタリック", "フシギ", "かたい", "トレーニングできる", "ゴージャス"], "isIbe": false, "aji": "しぶい"}, {"no": 248, "name": "ツタージャ", "tokui": ["さいばい", "ちらかす（つたひも）"], "kankyo": "うるおっている", "hitoshou": "アタシ", "sukimono": ["自然を感じる", "木製", "水を感じる", "ゆれる", "キラキラしてる"], "isIbe": false, "aji": "すっぱい"}, {"no": 249, "name": "ジャノビー", "tokui": ["さいばい", "ちらかす（つたひも）"], "kankyo": "うるおっている", "hitoshou": "アタシ", "sukimono": ["自然を感じる", "木製", "水を感じる", "せいけつ", "キラキラしてる"], "isIbe": false, "aji": "にがい"}, {"no": 250, "name": "ジャローダ", "tokui": ["さいばい", "ちらかす（つたひも）"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "木製", "水を感じる", "いれもの", "ほっそり"], "isIbe": false, "aji": "しぶい"}, {"no": 251, "name": "ケロマツ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "オイラ", "sukimono": ["水を感じる", "海を感じる", "せいけつ", "見て楽しむ", "いれもの"], "isIbe": false, "aji": "からい"}, {"no": 252, "name": "ゲコガシラ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "拙者", "sukimono": ["水を感じる", "海を感じる", "せいけつ", "見て楽しむ", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 253, "name": "ゲッコウガ", "tokui": ["うるおす", "きをきる"], "kankyo": "うるおっている", "hitoshou": "ワタシ", "sukimono": ["水を感じる", "海を感じる", "せいけつ", "キラキラしてる", "トレーニングできる"], "isIbe": false, "aji": "にがい"}, {"no": 254, "name": "デデンネ", "tokui": ["さがしもの"], "kankyo": "あかるい", "hitoshou": "うち", "sukimono": ["電気で動く", "キュート", "見て楽しむ", "みんなで使う", "食べものそっくり"], "isIbe": false, "aji": "あまい"}, {"no": 255, "name": "オンバット", "tokui": ["さがしもの"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["風を感じる", "炎を感じる", "見て楽しむ", "ゴージャス", "食べものそっくり"], "isIbe": false, "aji": "からい"}, {"no": 256, "name": "オンバーン", "tokui": ["さがしもの", "そらをとぶ"], "kankyo": "くらい", "hitoshou": "オイラ", "sukimono": ["風を感じる", "炎を感じる", "見て楽しむ", "あそびば", "食べものそっくり"], "isIbe": false, "aji": "しぶい"}, {"no": 257, "name": "ココガラ", "tokui": ["きをきる"], "kankyo": "あかるい", "hitoshou": "アタシ", "sukimono": ["風を感じる", "キラキラしてる", "いれもの", "ほっそり", "木製"], "isIbe": false, "aji": "すっぱい"}, {"no": 258, "name": "アオガラス", "tokui": ["きをきる"], "kankyo": "あかるい", "hitoshou": "ボク", "sukimono": ["風を感じる", "キラキラしてる", "いれもの", "ほっそり", "木製"], "isIbe": false, "aji": "しぶい"}, {"no": 259, "name": "アーマーガア", "tokui": ["きをきる", "そらをとぶ"], "kankyo": "あかるい", "hitoshou": "ワタシ", "sukimono": ["風を感じる", "メタリック", "キラキラしてる", "いれもの", "木製"], "isIbe": false, "aji": "にがい"}, {"no": 260, "name": "ドラメシヤ", "tokui": ["しわける", "さがしもの"], "kankyo": "うるおっている", "hitoshou": "ぼく", "sukimono": ["炎を感じる", "ブキミ", "乗りもの", "フシギ", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 261, "name": "ドロンチ", "tokui": ["しわける", "さがしもの"], "kankyo": "うるおっている", "hitoshou": "オイラ", "sukimono": ["炎を感じる", "ブキミ", "乗りもの", "フシギ", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 262, "name": "ドラパルト", "tokui": ["しわける", "とりひき"], "kankyo": "うるおっている", "hitoshou": "ワガハイ", "sukimono": ["炎を感じる", "ブキミ", "乗りもの", "フシギ", "みんなで使う"], "isIbe": false, "aji": "からい"}, {"no": 263, "name": "ニャオハ", "tokui": ["さいばい"], "kankyo": "あかるい", "hitoshou": "アタチ", "sukimono": ["自然を感じる", "花ざかり", "いれもの", "カラフル", "キュート"], "isIbe": false, "aji": "あまい"}, {"no": 264, "name": "ニャローテ", "tokui": ["さいばい"], "kankyo": "あかるい", "hitoshou": "ウチ", "sukimono": ["自然を感じる", "花ざかり", "とがっている", "カラフル", "キュート"], "isIbe": false, "aji": "すっぱい"}, {"no": 265, "name": "マスカーニャ", "tokui": ["さいばい", "もりあげる"], "kankyo": "あかるい", "hitoshou": "ワタシ", "sukimono": ["自然を感じる", "花ざかり", "キラキラしてる", "ゴージャス", "キュート"], "isIbe": false, "aji": "しぶい"}, {"no": 266, "name": "カイデン", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "おれ", "sukimono": ["電気で動く", "風を感じる", "海を感じる", "あつまり", "難しそうなもの"], "isIbe": false, "aji": "からい"}, {"no": 267, "name": "タイカイデン", "tokui": ["はつでん", "そらをとぶ"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["電気で動く", "風を感じる", "海を感じる", "あつまり", "ほっそり"], "isIbe": false, "aji": "しぶい"}, {"no": 268, "name": "カヌチャン", "tokui": ["けんちく"], "kankyo": "あかるい", "hitoshou": "あちし", "sukimono": ["キュート", "メタリック", "けんせつ", "食べものそっくり", "トレーニングできる"], "isIbe": false, "aji": "あまい"}, {"no": 269, "name": "ナカヌチャン", "tokui": ["けんちく"], "kankyo": "あかるい", "hitoshou": "アタイ", "sukimono": ["キュート", "メタリック", "けんせつ", "みんなで使う", "トレーニングできる"], "isIbe": false, "aji": "すっぱい"}, {"no": 270, "name": "デカヌチャン(おやかた)", "tokui": ["しょくにん"], "kankyo": "あかるい", "hitoshou": "ウチ", "sukimono": ["キュート", "メタリック", "けんせつ", "四角い", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 271, "name": "プテラ", "tokui": ["そらをとぶ"], "kankyo": "乾そうしている", "hitoshou": "ワシ", "sukimono": ["石づくり", "風を感じる", "かたい", "キラキラしてる", "まわる"], "isIbe": false, "aji": "すっぱい"}, {"no": 272, "name": "ズガイドス", "tokui": ["つぶす"], "kankyo": "乾そうしている", "hitoshou": "オイラ", "sukimono": ["石づくり", "かたい", "ゆれる", "みんなで使う", "トレーニングできる"], "isIbe": false, "aji": "からい"}, {"no": 273, "name": "ラムパルド", "tokui": ["つぶす", "ちらかす（いし）"], "kankyo": "乾そうしている", "hitoshou": "オレ", "sukimono": ["石づくり", "かたい", "メタリック", "ゴージャス", "トレーニングできる"], "isIbe": false, "aji": "しぶい"}, {"no": 274, "name": "タテトプス", "tokui": ["つぶす"], "kankyo": "乾そうしている", "hitoshou": "ぼく", "sukimono": ["石づくり", "かたい", "メタリック", "ゴージャス", "まんまる"], "isIbe": false, "aji": "あまい"}, {"no": 275, "name": "トリデプス", "tokui": ["つぶす", "ちらかす（いし）"], "kankyo": "乾そうしている", "hitoshou": "ぼく", "sukimono": ["石づくり", "かたい", "メタリック", "ゴージャス", "トレーニングできる"], "isIbe": false, "aji": "にがい"}, {"no": 276, "name": "チゴラス", "tokui": ["つぶす"], "kankyo": "乾そうしている", "hitoshou": "おれ", "sukimono": ["石づくり", "かたい", "炎を感じる", "ゴージャス", "トレーニングできる"], "isIbe": false, "aji": "あまい"}, {"no": 277, "name": "ガチゴラス", "tokui": ["つぶす", "ちらかす（いし）"], "kankyo": "乾そうしている", "hitoshou": "オレさま", "sukimono": ["石づくり", "かたい", "炎を感じる", "ゴージャス", "トレーニングできる"], "isIbe": false, "aji": "すっぱい"}, {"no": 278, "name": "アマルス", "tokui": ["つぶす"], "kankyo": "すずしい", "hitoshou": "わたし", "sukimono": ["石づくり", "かたい", "キラキラしてる", "みんなで使う", "いれもの"], "isIbe": false, "aji": "しぶい"}, {"no": 279, "name": "アマルルガ", "tokui": ["つぶす", "ちらかす（いし）"], "kankyo": "すずしい", "hitoshou": "わたし", "sukimono": ["石づくり", "かたい", "キラキラしてる", "音が鳴る", "シンボル"], "isIbe": false, "aji": "すっぱい"}, {"no": 280, "name": "イーブイ", "tokui": ["とりひき"], "kankyo": "あたたかい", "hitoshou": "ぼく", "sukimono": ["やわらかい", "石づくり", "キュート", "文字がある", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 281, "name": "シャワーズ", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "あたし", "sukimono": ["水を感じる", "せいけつ", "キュート", "花ざかり", "見て楽しむ"], "isIbe": false, "aji": "あまい"}, {"no": 282, "name": "サンダース", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["電気で動く", "キラキラしてる", "キュート", "ガラス入り", "とがっている"], "isIbe": false, "aji": "からい"}, {"no": 283, "name": "ブースター", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "ボク", "sukimono": ["炎を感じる", "木製", "キュート", "メタリック", "乗りもの"], "isIbe": false, "aji": "からい"}, {"no": 284, "name": "エーフィ", "tokui": ["しわける"], "kankyo": "あかるい", "hitoshou": "ワタシ", "sukimono": ["フシギ", "風を感じる", "キュート", "難しそうなもの", "見て楽しむ"], "isIbe": false, "aji": "あまい"}, {"no": 285, "name": "ブラッキー", "tokui": ["さがしもの"], "kankyo": "くらい", "hitoshou": "ボク", "sukimono": ["キラキラしてる", "ゴージャス", "キュート", "文字がある", "見て楽しむ"], "isIbe": false, "aji": "にがい"}, {"no": 286, "name": "リーフィア", "tokui": ["さいばい"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["自然を感じる", "花ざかり", "キュート", "布仕立て", "キズをいやす"], "isIbe": false, "aji": "すっぱい"}, {"no": 287, "name": "グレイシア", "tokui": ["とりひき"], "kankyo": "すずしい", "hitoshou": "アタシ", "sukimono": ["水を感じる", "キラキラしてる", "キュート", "ガラス入り", "みんなで使う"], "isIbe": false, "aji": "あまい"}, {"no": 288, "name": "ニンフィア", "tokui": ["もりあげる"], "kankyo": "あたたかい", "hitoshou": "わたし", "sukimono": ["キュート", "自然を感じる", "布仕立て", "音が鳴る", "まんまる"], "isIbe": false, "aji": "あまい"}, {"no": 289, "name": "カイオーガ", "tokui": ["なし"], "kankyo": "うるおっている", "hitoshou": "ワシ", "sukimono": ["水を感じる", "海を感じる", "ゴージャス", "キラキラしてる", "ガラス入り"], "isIbe": false, "aji": "しぶい"}, {"no": 290, "name": "ライコウ", "tokui": ["はつでん"], "kankyo": "あかるい", "hitoshou": "オレ", "sukimono": ["電気で動く", "風を感じる", "キラキラしてる", "ガラス入り", "ゴージャス"], "isIbe": false, "aji": "しぶい"}, {"no": 291, "name": "エンテイ", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "ワタシ", "sukimono": ["炎を感じる", "石づくり", "シンボル", "トレーニングできる", "ゴージャス"], "isIbe": false, "aji": "にがい"}, {"no": 292, "name": "スイクン", "tokui": ["うるおす"], "kankyo": "うるおっている", "hitoshou": "ワタクシ", "sukimono": ["水を感じる", "海を感じる", "せいけつ", "見て楽しむ", "キズをいやす"], "isIbe": false, "aji": "すっぱい"}, {"no": 293, "name": "ボルケニオン", "tokui": ["もやす"], "kankyo": "あたたかい", "hitoshou": "オレ", "sukimono": ["炎を感じる", "水を感じる", "石づくり", "いれもの", "シンボル"], "isIbe": false, "aji": "からい"}, {"no": 294, "name": "フリーザー", "tokui": ["そらをとぶ"], "kankyo": "すずしい", "hitoshou": "ワタシ", "sukimono": ["水を感じる", "風を感じる", "キラキラしてる", "シンボル", "ゴージャス"], "isIbe": false, "aji": "すっぱい"}, {"no": 295, "name": "サンダー", "tokui": ["そらをとぶ"], "kankyo": "あかるい", "hitoshou": "オレ様", "sukimono": ["電気で動く", "風を感じる", "ガラス入り", "シンボル", "ゴージャス"], "isIbe": false, "aji": "からい"}, {"no": 296, "name": "ファイヤー", "tokui": ["そらをとぶ"], "kankyo": "あたたかい", "hitoshou": "オレ", "sukimono": ["炎を感じる", "風を感じる", "石づくり", "シンボル", "ゴージャス"], "isIbe": false, "aji": "からい"}, {"no": 297, "name": "ルギア", "tokui": ["なし"], "kankyo": "うるおっている", "hitoshou": "オレ", "sukimono": ["フシギ", "風を感じる", "水を感じる", "海を感じる", "シンボル"], "isIbe": false, "aji": "しぶい"}, {"no": 298, "name": "ホウオウ", "tokui": ["なし"], "kankyo": "あたたかい", "hitoshou": "わたし", "sukimono": ["炎を感じる", "木製", "風を感じる", "自然を感じる", "シンボル"], "isIbe": false, "aji": "からい"}, {"no": 299, "name": "ミュウツー", "tokui": ["テレポート"], "kankyo": "くらい", "hitoshou": "ワタシ", "sukimono": ["フシギ", "見て楽しむ", "文字がある", "難しそうなもの", "石づくり"], "isIbe": false, "aji": "しぶい"}, {"no": 300, "name": "ミュウ", "tokui": ["テレポート"], "kankyo": "あたたかい", "hitoshou": "ボク", "sukimono": ["フシギ", "見て楽しむ", "ゴージャス", "難しそうなもの", "あそびば"], "isIbe": false, "aji": "あまい"}, {"no": "イベ.1", "name": "ハネッコ", "tokui": ["さいばい"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "自然を感じる", "風を感じる", "花ざかり", "ゆれる"], "isIbe": true, "aji": "あまい"}, {"no": "イベ.2", "name": "ポポッコ", "tokui": ["さいばい"], "kankyo": "あかるい", "hitoshou": "わたし", "sukimono": ["やわらかい", "自然を感じる", "風を感じる", "花ざかり", "まわる"], "isIbe": true, "aji": "しぶい"}, {"no": "イベ.3", "name": "ワタッコ", "tokui": ["さいばい", "ちらかす（わた）"], "kankyo": "あかるい", "hitoshou": "アタシ", "sukimono": ["やわらかい", "自然を感じる", "風を感じる", "花ざかり", "まんまる"], "isIbe": true, "aji": "すっぱい"}];
+
+// Default sort: numeric first, then イベ
+POKEMON_DATA.sort((a, b) => {
+  if (a.isIbe && !b.isIbe) return 1;
+  if (!a.isIbe && b.isIbe) return -1;
+  if (!a.isIbe && !b.isIbe) return a.no - b.no;
+  const na = parseInt(String(a.no).replace(/[^0-9]/g, '')) || 0;
+  const nb = parseInt(String(b.no).replace(/[^0-9]/g, '')) || 0;
+  return na - nb;
+});
+
+const selectedSet = new Set();
+let showSelectedOnly = false;
+let activeFilters = { tokui: new Set(), kankyo: new Set(), sukimono: new Set(), aji: new Set() };
+
+const allTokuiRaw = [...new Set(POKEMON_DATA.flatMap(p => p.tokui))].sort((a,b) => a.localeCompare(b,'ja'));
+const _chiraIdx = allTokuiRaw.findIndex(t => t.startsWith('ちらかす（'));
+const allTokui = _chiraIdx >= 0 ? [...allTokuiRaw.slice(0, _chiraIdx), 'ちらかす', ...allTokuiRaw.slice(_chiraIdx)] : allTokuiRaw;
+const allKankyo = [...new Set(POKEMON_DATA.map(p => p.kankyo).filter(Boolean))].sort((a,b) => a.localeCompare(b,'ja'));
+const allSukimono = [...new Set(POKEMON_DATA.flatMap(p => p.sukimono))].sort((a,b) => a.localeCompare(b,'ja'));
+const allAji = [...new Set(POKEMON_DATA.map(p => p.aji).filter(Boolean))].sort((a,b) => a.localeCompare(b,'ja'));
+
+function buildFilterTags(id, values, key) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  values.forEach(v => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.dataset.key = key;
+    span.dataset.val = v;
+    span.textContent = v;
+    span.addEventListener('click', () => toggleFilter(key, v));
+    el.appendChild(span);
+  });
+}
+
+function toggleFilter(key, value) {
+  activeFilters[key].has(value) ? activeFilters[key].delete(value) : activeFilters[key].add(value);
+  updateTagHighlight();
+  applyFilters();
+}
+
+function clearFilter(key) {
+  activeFilters[key].clear();
+  updateTagHighlight();
+  applyFilters();
+}
+
+function clearAllFilters() {
+  activeFilters = { tokui: new Set(), kankyo: new Set(), sukimono: new Set(), aji: new Set() };
+  document.getElementById('searchInput').value = '';
+  updateTagHighlight();
+  applyFilters();
+}
+
+function updateTagHighlight() {
+  document.querySelectorAll('.tag').forEach(tag => {
+    const _k = tag.dataset.key, _v = tag.dataset.val;
+    tag.classList.toggle('active', activeFilters[_k].has(_v) || (_k === 'tokui' && activeFilters.tokui.has('ちらかす') && _v.startsWith('ちらかす（')));
+  });
+  const parts = [];
+  if (activeFilters.tokui.size) parts.push('得意：' + [...activeFilters.tokui].join('・'));
+  if (activeFilters.kankyo.size) parts.push('環境：' + [...activeFilters.kankyo].join('・'));
+  if (activeFilters.sukimono.size) parts.push('もの：' + [...activeFilters.sukimono].join('・'));
+  if (activeFilters.aji.size) parts.push('味：' + [...activeFilters.aji].join('・'));
+  document.getElementById('filterSummary').textContent = parts.length ? '▼ ' + parts.join(' / ') : '';
+}
+
+function toggleCard(name) {
+  selectedSet.has(name) ? selectedSet.delete(name) : selectedSet.add(name);
+  const card = document.querySelector('[data-id]');
+  // Update all cards with this name
+  document.querySelectorAll('.card').forEach(c => {
+    if (c.dataset.id === name) c.classList.toggle('selected', selectedSet.has(name));
+  });
+  updateSelectedUI();
+}
+
+function clearAllSelected() {
+  selectedSet.clear();
+  if (showSelectedOnly) { showSelectedOnly = false; updateShowBtn(); }
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  updateSelectedUI();
+  applyFilters();
+}
+
+function selectAllVisible() {
+  getFilteredData().forEach(p => selectedSet.add(p.name));
+  document.querySelectorAll('.card').forEach(c => {
+    if (selectedSet.has(c.dataset.id)) c.classList.add('selected');
+  });
+  updateSelectedUI();
+}
+
+function toggleShowSelected() {
+  if (selectedSet.size === 0) return;
+  showSelectedOnly = !showSelectedOnly;
+  updateShowBtn();
+  applyFilters();
+}
+
+function updateShowBtn() {
+  const btn = document.getElementById('showSelectedBtn');
+  if (showSelectedOnly) {
+    btn.textContent = '\u2714 \u9078\u629e\u4e2d\u306e\u307f\u8868\u793a\u4e2d';
+    btn.style.background = '#10b981';
+  } else {
+    btn.textContent = '\u2714 \u30c1\u30a7\u30c3\u30af\u3057\u305f\u30dd\u30b1\u30e2\u30f3\u3092\u8868\u793a';
+    btn.style.background = '';
+  }
+}
+
+function updateSelectedUI() {
+  const cnt = selectedSet.size;
+  document.getElementById('selectedCount').textContent = cnt > 0 ? cnt + '\u4f53\u9078\u629e\u4e2d' : '';
+  document.getElementById('selectedPanelCount').textContent = cnt;
+  const panel = document.getElementById('selectedPanel');
+  const summary = document.getElementById('selectedSummary');
+  if (cnt > 0) {
+    panel.classList.add('show');
+    summary.innerHTML = '';
+    [...selectedSet].forEach(name => {
+      const chip = document.createElement('span');
+      chip.className = 'selected-chip';
+      chip.textContent = name + ' ';
+      const rm = document.createElement('span');
+      rm.className = 'rm';
+      rm.textContent = '\u00d7';
+      rm.addEventListener('click', e => { e.stopPropagation(); removeSelected(name); });
+      chip.appendChild(rm);
+      summary.appendChild(chip);
+    });
+  } else {
+    panel.classList.remove('show');
+    if (showSelectedOnly) { showSelectedOnly = false; updateShowBtn(); }
+  }
+}
+
+function removeSelected(name) {
+  selectedSet.delete(name);
+  document.querySelectorAll('.card').forEach(c => {
+    if (c.dataset.id === name) c.classList.remove('selected');
+  });
+  updateSelectedUI();
+  applyFilters();
+}
+
+function getFilteredData() {
+  const search = document.getElementById('searchInput').value.trim();
+  const searchLower = search.toLowerCase();
+  return POKEMON_DATA.filter(p => {
+    if (showSelectedOnly && !selectedSet.has(p.name)) return false;
+    if (search && !p.name.toLowerCase().includes(searchLower) && !String(p.no).toLowerCase().includes(searchLower)) return false;
+    if (activeFilters.tokui.size > 0 && !p.tokui.some(t => activeFilters.tokui.has(t) || (activeFilters.tokui.has('ちらかす') && t.startsWith('ちらかす（')))) return false;
+    if (activeFilters.kankyo.size > 0 && !activeFilters.kankyo.has(p.kankyo)) return false;
+    if (activeFilters.sukimono.size > 0 && !p.sukimono.some(s => activeFilters.sukimono.has(s))) return false;
+    if (activeFilters.aji.size > 0 && !activeFilters.aji.has(p.aji)) return false;
+    return true;
+  });
+}
+
+function defaultOrder(p) {
+  return p.isIbe ? 99999 + (parseInt(String(p.no).replace(/[^0-9]/g,''))||0) : p.no;
+}
+
+function applyFilters() {
+  let data = getFilteredData();
+  const sort = document.getElementById('sortSelect').value;
+  if (sort === 'name') {
+    data = [...data].sort((a,b) => a.name.localeCompare(b.name,'ja'));
+  } else if (sort === 'kankyo') {
+    data = [...data].sort((a,b) => {
+      const ka = a.kankyo||''; const kb = b.kankyo||'';
+      return ka.localeCompare(kb,'ja') || defaultOrder(a) - defaultOrder(b);
+    });
+  } else if (sort === 'tokui') {
+    data = [...data].sort((a,b) => {
+      const ta = a.tokui[0]||''; const tb = b.tokui[0]||'';
+      return ta.localeCompare(tb,'ja') || defaultOrder(a) - defaultOrder(b);
+    });
+  }
+  renderGrid(data, sort);
+  document.getElementById('resultCount').textContent = data.length + ' / ' + POKEMON_DATA.length + '\u4f53';
+  document.getElementById('headerStats').textContent = '\u5168' + POKEMON_DATA.length + '\u4f53';
+}
+
+function renderGrid(data, sort) {
+  const grid = document.getElementById('pokemonGrid');
+  grid.innerHTML = '';
+
+  if (data.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<div class="icon">&#x1F914;</div><p>\u6761\u4ef6\u306b\u5408\u3046\u30dd\u30b1\u30e2\u30f3\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f</p>';
+    grid.appendChild(empty);
+    return;
+  }
+
+  const activeS = activeFilters.sukimono;
+  const activeT = activeFilters.tokui;
+  const activeA = activeFilters.aji;
+  let ibeStarted = false;
+
+  data.forEach(p => {
+    if (sort === 'no' && p.isIbe && !ibeStarted) {
+      ibeStarted = true;
+      const div = document.createElement('div');
+      div.className = 'ibe-divider';
+      div.innerHTML = '&#x2B50; \u30A4\u30D9\u30F3\u30C8\u30DD\u30B1\u30E2\u30F3';
+      grid.appendChild(div);
+    }
+
+    const isSel = selectedSet.has(p.name);
+    const card = document.createElement('div');
+    card.className = 'card' + (isSel ? ' selected' : '');
+    card.dataset.id = p.name;
+
+    const noText = p.isIbe
+      ? '\u2B50 ' + p.no
+      : 'No.' + String(p.no).padStart(3,'0');
+    const noStyle = p.isIbe ? 'color:#f9a8d4;font-size:10px' : '';
+
+    let tokuiHtml = p.tokui.length
+      ? p.tokui.map(t => `<span class="card-tag tokui${activeT.size>0&&(activeT.has(t)||(activeT.has('ちらかす')&&t.startsWith('ちらかす（')))?' hl':''}">${t}</span>`).join('')
+      : '<span style="color:var(--text-muted);font-size:10px">-</span>';
+
+    const kankyoHtml = p.kankyo
+      ? `<span class="card-tag kankyo">${p.kankyo}</span>`
+      : '<span style="color:var(--text-muted);font-size:10px">-</span>';
+
+    const sukiHtml = p.sukimono
+      .map(s => `<span class="card-tag sukimono${activeS.size>0&&activeS.has(s)?' hl':''}">${s}</span>`)
+      .join('');
+
+    const ajiHtml = p.aji
+      ? `<span class="card-tag aji${activeA.size>0&&activeA.has(p.aji)?' hl':''}">${p.aji}</span>`
+      : '<span style="color:var(--text-muted);font-size:10px">-</span>';
+
+    card.innerHTML =
+      `<div class="card-header">` +
+        `<div class="checkbox"></div>` +
+        `<div class="card-name-block">` +
+          `<div class="card-no" style="${noStyle}">${noText}</div>` +
+          `<div class="card-name">${p.name}</div>` +
+          (p.hitoshou ? `<div class="card-hitoshou">\u4e00\u4eba\u79f0\uff1a${p.hitoshou}</div>` : '') +
+        `</div>` +
+      `</div>` +
+      `<div class="card-section">` +
+        `<div class="card-label">&#x26A1; \u5f97\u610f\u306a\u3053\u3068</div>` +
+        `<div class="card-tags">${tokuiHtml}</div>` +
+      `</div>` +
+      `<div class="card-section">` +
+        `<div class="card-label">&#x1F343; \u597d\u304d\u306a\u74b0\u5883</div>` +
+        `<div class="card-tags">${kankyoHtml}</div>` +
+      `</div>` +
+      `<div class="card-section">` +
+        `<div class="card-label">&#x1F37D;&#xFE0F; \u597d\u304d\u306a\u5473</div>` +
+        `<div class="card-tags">${ajiHtml}</div>` +
+      `</div>` +
+      `<div class="card-section">` +
+        `<div class="card-label">&#x2B50; \u597d\u304d\u306a\u3082\u306e</div>` +
+        `<div class="card-tags">${sukiHtml}</div>` +
+      `</div>`;
+
+    card.addEventListener('click', () => toggleCard(p.name));
+    grid.appendChild(card);
+  });
+}
+
+// Init
+buildFilterTags('tokuiTags', allTokui, 'tokui');
+buildFilterTags('kankyoTags', allKankyo, 'kankyo');
+buildFilterTags('sukimonoTags', allSukimono, 'sukimono');
+buildFilterTags('ajiTags', allAji, 'aji');
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+applyFilters();
+
+</script>
+</body>
+</html>
